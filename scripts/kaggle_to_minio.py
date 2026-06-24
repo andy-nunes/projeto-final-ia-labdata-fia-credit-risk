@@ -14,8 +14,8 @@ RAW_BUCKET = os.getenv("RAW_BUCKET", "raw")
 MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
-PROJECT_BUCKETS = ("raw", "clean", "abt")
-EXPECTED_RAW_FILES = (
+PROJECT_BUCKETS: tuple[str, ...] = ("raw", "clean", "abt")
+EXPECTED_RAW_FILES: tuple[str, ...] = (
     "HomeCredit_columns_description.csv",
     "POS_CASH_balance.csv",
     "application_test.csv",
@@ -82,7 +82,10 @@ def upload_expected_csv_files(
 ) -> list[str]:
     """Envia os CSVs esperados para o bucket, substituindo objetos existentes."""
     csvs_by_name = find_downloaded_csvs(source_dir)
-    missing_from_download = sorted(set(expected_files) - set(csvs_by_name))
+    downloaded_names = set(csvs_by_name)
+    missing_from_download = sorted(
+        file_name for file_name in expected_files if file_name not in downloaded_names
+    )
     if missing_from_download:
         raise RuntimeError(
             "Kaggle download did not contain expected files: "
@@ -100,7 +103,7 @@ def upload_expected_csv_files(
 def missing_expected_files(client, bucket: str) -> list[str]:
     """Retorna os arquivos esperados que ainda nao existem no bucket."""
     existing = list_bucket_keys(client, bucket)
-    return sorted(set(EXPECTED_RAW_FILES) - existing)
+    return sorted(file_name for file_name in EXPECTED_RAW_FILES if file_name not in existing)
 
 
 def replace_kaggle_raw_files() -> dict[str, object]:
