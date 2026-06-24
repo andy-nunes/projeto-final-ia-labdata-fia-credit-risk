@@ -50,7 +50,7 @@ docker compose run --rm minio-client ls --recursive local/raw
 
 ## Logs das tasks
 
-O servico `airflow` define `AIRFLOW__CORE__HOSTNAME_CALLABLE` como
-`airflow.utils.net.get_host_ip_address`. Essa configuracao evita que o Airflow
-registre tasks com hostname vazio e tente buscar logs em URLs invalidas como
-`http://:8793/log/...`.
+O servico `airflow` usa hostname fixo `airflow` e define
+`AIRFLOW__CORE__HOSTNAME_CALLABLE=scripts.airflow_config.get_airflow_hostname`.
+Essa configuracao evita que o Airflow registre tasks com hostname vazio e tente
+buscar logs em URLs invalidas como `http://:8793/log/...`.

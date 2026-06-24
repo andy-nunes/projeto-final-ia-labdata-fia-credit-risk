@@ -24,9 +24,10 @@ services:
       context: .
       dockerfile: Dockerfile.airflow
     image: fia-credit-risk-airflow
+    hostname: airflow
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__HOSTNAME_CALLABLE: airflow.utils.net.get_host_ip_address
+      AIRFLOW__CORE__HOSTNAME_CALLABLE: scripts.airflow_config.get_airflow_hostname
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: admin:admin
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
@@ -37,6 +38,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       DATA_DIR: /opt/airflow/Dados
+      AIRFLOW_HOSTNAME: airflow
       PYTHONPATH: /opt/airflow
     volumes:
       - ./dags:/opt/airflow/dags
