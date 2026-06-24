@@ -36,6 +36,10 @@ Na inicializacao, o container do Airflow executa `airflow db migrate` e
 clones limpos, as DAGs montadas em `./dags` sejam serializadas no banco local e
 aparecam na listagem/UI sem comando manual adicional.
 
+O Airflow tambem define `AIRFLOW__CORE__HOSTNAME_CALLABLE` como
+`airflow.utils.net.get_host_ip_address` para evitar URLs internas de logs sem
+host, como `http://:8793/log/...`, em ambientes Docker diferentes.
+
 Se precisar reiniciar tudo do zero, use:
 
 ```bash

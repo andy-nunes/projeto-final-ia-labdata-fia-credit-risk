@@ -99,6 +99,9 @@ Comportamento do servico `airflow`:
 - Monta `./scripts` em `/opt/airflow/scripts`.
 - Define `PYTHONPATH=/opt/airflow` para permitir imports como
   `from scripts.kaggle_to_minio import ...`.
+- Define `AIRFLOW__CORE__HOSTNAME_CALLABLE=airflow.utils.net.get_host_ip_address`
+  para que os logs das tasks usem um host valido no servidor interno da porta
+  `8793`.
 - Executa `airflow db migrate` e `airflow dags reserialize` antes do
   `airflow standalone`, garantindo que as DAGs sejam registradas no banco local
   em clones novos.
