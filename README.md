@@ -64,3 +64,6 @@ Todos esses servicos montam a pasta `Dados` dentro dos containers.
 Arquivos CSV nao devem ser versionados. A pasta `Dados/` existe para volumes
 locais e artefatos intermediarios, mas os dados brutos baixados pelo Kaggle
 devem ser armazenados no bucket `raw` do MinIO.
+
+Para inspecionar ou copiar arquivos entre MinIO e `Dados`, use o servico
+`minio-client`. Consulte `docs/minio-client.md`.
