@@ -99,6 +99,9 @@ Comportamento do servico `airflow`:
 - Monta `./scripts` em `/opt/airflow/scripts`.
 - Define `PYTHONPATH=/opt/airflow` para permitir imports como
   `from scripts.kaggle_to_minio import ...`.
+- Executa `airflow db migrate` e `airflow dags reserialize` antes do
+  `airflow standalone`, garantindo que as DAGs sejam registradas no banco local
+  em clones novos.
 
 Comandos principais:
 
@@ -246,6 +249,14 @@ Resultado relevante:
 
 ```text
 download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
+```
+
+Se uma DAG existir em `dags/` mas nao aparecer na listagem depois de uma subida
+antiga do ambiente, force a serializacao manualmente:
+
+```bash
+docker compose exec -T airflow airflow dags reserialize
+docker compose exec -T airflow airflow dags list
 ```
 
 ```bash

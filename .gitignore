@@ -223,3 +223,7 @@ __marimo__/
 # Airflow runtime logs
 /logs/*
 !/logs/.gitkeep
+
+# Local agent instructions
+AGENTS.md
+SKILL.md

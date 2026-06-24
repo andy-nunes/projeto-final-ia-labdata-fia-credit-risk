@@ -31,6 +31,11 @@ Suba os servicos locais de orquestracao, storage e app:
 docker compose up -d minio airflow streamlit
 ```
 
+Na inicializacao, o container do Airflow executa `airflow db migrate` e
+`airflow dags reserialize` antes do `airflow standalone`. Isso garante que, em
+clones limpos, as DAGs montadas em `./dags` sejam serializadas no banco local e
+aparecam na listagem/UI sem comando manual adicional.
+
 Se precisar reiniciar tudo do zero, use:
 
 ```bash

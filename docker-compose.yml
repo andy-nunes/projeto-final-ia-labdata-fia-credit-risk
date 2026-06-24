@@ -48,6 +48,7 @@ services:
       - "8080:8080"
     command: >
       bash -c "airflow db migrate &&
+      airflow dags reserialize &&
       exec airflow standalone"
     depends_on:
       - minio

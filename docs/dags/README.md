@@ -21,6 +21,15 @@ Listar DAGs:
 docker compose exec -T airflow airflow dags list
 ```
 
+Em clones limpos, o container do Airflow ja executa `airflow dags reserialize`
+na inicializacao. Se o ambiente foi iniciado antes dessa configuracao ou se a
+listagem ficar desatualizada, rode:
+
+```bash
+docker compose exec -T airflow airflow dags reserialize
+docker compose exec -T airflow airflow dags list
+```
+
 Disparar uma DAG:
 
 ```bash
