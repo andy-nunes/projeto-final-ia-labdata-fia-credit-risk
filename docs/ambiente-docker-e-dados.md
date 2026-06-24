@@ -29,6 +29,8 @@ Foram adicionados arquivos para um ambiente inicial de desenvolvimento:
   para o build.
 - `requirements.txt`: dependencias Python iniciais.
 - `requirements-airflow.txt`: dependencias adicionais da imagem Airflow.
+- `scripts/`: codigos executaveis reutilizados pelo projeto e importados pelas
+  DAGs.
 - `Dados/.gitkeep`: preserva a pasta de volumes locais no Git.
 - Atualizacao do `README.md` com comandos principais.
 - Atualizacao do `.gitignore` com `*.csv`.
@@ -90,6 +92,13 @@ Comportamento do servico `dev`:
 - Define `KAGGLE_CONFIG_DIR=/root/.kaggle`.
 - Define `PYTHONPATH=/app`.
 - Abre `bash` por padrao.
+
+Comportamento do servico `airflow`:
+
+- Monta `./dags` em `/opt/airflow/dags`.
+- Monta `./scripts` em `/opt/airflow/scripts`.
+- Define `PYTHONPATH=/opt/airflow` para permitir imports como
+  `from scripts.kaggle_to_minio import ...`.
 
 Comandos principais:
 
@@ -288,9 +297,6 @@ Montagem da pasta `Dados`:
 - MinIO: `/Dados`
 - Streamlit: `/app/Dados`
 
-Foi criada a DAG `data_volume_check` em `dags/data_volume_check.py` para validar
-que o Airflow consegue ler o volume `Dados`.
-
 O app inicial do Streamlit esta em `app/streamlit_app.py` e lista os arquivos do
 volume `Dados`, alem de testar uma conexao S3 com o MinIO via `boto3`.
 
@@ -360,7 +366,6 @@ docker compose exec -T airflow airflow dags list
 Resultado relevante:
 
 ```text
-data_volume_check | /opt/airflow/dags/data_volume_check.py | airflow | True
 download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
 ```
 

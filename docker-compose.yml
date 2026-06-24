@@ -36,8 +36,10 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       DATA_DIR: /opt/airflow/Dados
+      PYTHONPATH: /opt/airflow
     volumes:
       - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ./Dados:/opt/airflow/Dados

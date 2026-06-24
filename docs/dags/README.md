@@ -4,13 +4,14 @@ Esta pasta documenta as DAGs Airflow do projeto. Todas as DAGs atuais sao
 manuais (`schedule=None`) e devem ser disparadas sob demanda pela interface do
 Airflow ou pela CLI.
 
+As DAGs devem conter apenas a orquestracao. O codigo executavel usado pelo
+projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
+
 ## DAGs disponiveis
 
 - [`download_kaggle_to_minio`](download_kaggle_to_minio.md): baixa os dados
   brutos da competicao Home Credit Default Risk e substitui os CSVs no bucket
   `raw` do MinIO.
-- [`data_volume_check`](data_volume_check.md): valida se o volume local `Dados`
-  esta montado e acessivel pelo Airflow.
 
 ## Comandos uteis
 

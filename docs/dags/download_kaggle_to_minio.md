@@ -12,6 +12,7 @@ armazenar os CSVs esperados no bucket `raw` do MinIO.
 - Catchup: desabilitado (`catchup=False`)
 - Tags: `credit-risk`, `kaggle`, `minio`
 - Arquivo: `dags/download_kaggle_to_minio.py`
+- Script importado: `scripts/kaggle_to_minio.py`
 
 ## Dependencias
 
@@ -38,13 +39,14 @@ Bibliotecas:
 
 Quando executada, a DAG:
 
-1. Cria os buckets `raw`, `clean` e `abt` caso eles ainda nao existam.
-2. Baixa a competicao `home-credit-default-risk` para um diretorio temporario.
-3. Localiza os 10 CSVs esperados no conteudo baixado.
-4. Envia os 10 CSVs para o bucket `raw`.
-5. Substitui objetos existentes no bucket quando o nome do arquivo ja existe.
-6. Valida se todos os arquivos esperados existem no bucket depois do upload.
-7. Falha explicitamente se algum arquivo esperado estiver ausente.
+1. Chama `replace_kaggle_raw_files()` em `scripts/kaggle_to_minio.py`.
+2. Cria os buckets `raw`, `clean` e `abt` caso eles ainda nao existam.
+3. Baixa a competicao `home-credit-default-risk` para um diretorio temporario.
+4. Localiza os 10 CSVs esperados no conteudo baixado.
+5. Envia os 10 CSVs para o bucket `raw`.
+6. Substitui objetos existentes no bucket quando o nome do arquivo ja existe.
+7. Valida se todos os arquivos esperados existem no bucket depois do upload.
+8. Falha explicitamente se algum arquivo esperado estiver ausente.
 
 ## Arquivos esperados
 
@@ -96,6 +98,8 @@ Resultado esperado:
 ## Observacoes
 
 - A DAG nao usa `Dados/raw` como cache local.
+- A DAG mantem apenas a orquestracao; a logica de download, validacao e upload
+  fica em `scripts/kaggle_to_minio.py`.
 - A fonte de verdade dos dados brutos e o bucket `raw` no MinIO.
 - A execucao baixa cerca de 688 MB da Kaggle e pode levar alguns minutos,
   dependendo da rede.

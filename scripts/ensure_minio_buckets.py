@@ -1,3 +1,5 @@
+"""Inicializa os buckets MinIO necessarios antes de subir o Streamlit."""
+
 import os
 import time
 
@@ -13,6 +15,7 @@ PROJECT_BUCKETS = ("raw", "clean", "abt")
 
 
 def get_minio_client():
+    """Cria um cliente S3 apontando para o MinIO local."""
     return boto3.client(
         "s3",
         endpoint_url=MINIO_ENDPOINT_URL,
@@ -24,6 +27,7 @@ def get_minio_client():
 
 
 def wait_for_minio():
+    """Aguarda o MinIO ficar disponivel e retorna um cliente conectado."""
     client = get_minio_client()
     for _ in range(30):
         try:
@@ -35,6 +39,7 @@ def wait_for_minio():
 
 
 def ensure_buckets(client) -> None:
+    """Cria os buckets do projeto quando ainda nao existem."""
     existing = {bucket["Name"] for bucket in client.list_buckets().get("Buckets", [])}
     for bucket in PROJECT_BUCKETS:
         if bucket not in existing:

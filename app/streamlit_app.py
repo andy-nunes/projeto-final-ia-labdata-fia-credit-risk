@@ -1,3 +1,5 @@
+"""Aplicacao Streamlit para inspecionar dados locais e buckets MinIO."""
+
 from pathlib import Path
 import os
 
@@ -15,12 +17,14 @@ PROJECT_BUCKETS = ("raw", "clean", "abt")
 
 
 def list_data_files() -> list[Path]:
+    """Lista arquivos montados no volume local de dados."""
     if not DATA_DIR.exists():
         return []
     return sorted(path for path in DATA_DIR.rglob("*") if path.is_file())
 
 
 def get_minio_client():
+    """Cria um cliente S3 configurado para acessar o MinIO."""
     return boto3.client(
         "s3",
         endpoint_url=MINIO_ENDPOINT_URL,
@@ -32,6 +36,7 @@ def get_minio_client():
 
 
 def list_minio_buckets() -> tuple[bool, str, list[str]]:
+    """Garante buckets do projeto e retorna a lista de buckets do MinIO."""
     client = get_minio_client()
     try:
         ensure_project_buckets(client)
@@ -42,6 +47,7 @@ def list_minio_buckets() -> tuple[bool, str, list[str]]:
 
 
 def ensure_project_buckets(client) -> None:
+    """Cria os buckets esperados pelo projeto quando necessario."""
     existing = {bucket["Name"] for bucket in client.list_buckets().get("Buckets", [])}
     for bucket in PROJECT_BUCKETS:
         if bucket not in existing:
@@ -49,6 +55,7 @@ def ensure_project_buckets(client) -> None:
 
 
 def list_bucket_objects(bucket: str) -> list[dict[str, object]]:
+    """Lista objetos de um bucket com nome e tamanho em bytes."""
     client = get_minio_client()
     response = client.list_objects_v2(Bucket=bucket)
     return [
@@ -58,6 +65,7 @@ def list_bucket_objects(bucket: str) -> list[dict[str, object]]:
 
 
 def check_minio() -> tuple[bool, str]:
+    """Verifica se o MinIO esta acessivel."""
     client = boto3.client(
         "s3",
         endpoint_url=MINIO_ENDPOINT_URL,
