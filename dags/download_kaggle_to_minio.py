@@ -7,13 +7,11 @@ import os
 
 import boto3
 import kagglehub
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 from botocore.client import Config
-from botocore.exceptions import ClientError
 
 
 COMPETITION_NAME = "home-credit-default-risk"
-LOCAL_RAW_DATA_DIR = Path(os.getenv("DATA_DIR", "/opt/airflow/Dados")) / "raw"
 RAW_BUCKET = os.getenv("RAW_BUCKET", "raw")
 MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
@@ -51,32 +49,54 @@ def ensure_buckets(client) -> None:
             client.create_bucket(Bucket=bucket)
 
 
-def object_exists(client, bucket: str, key: str) -> bool:
-    try:
-        client.head_object(Bucket=bucket, Key=key)
-    except ClientError as exc:
-        error_code = exc.response.get("Error", {}).get("Code")
-        if error_code in {"404", "NoSuchKey", "NotFound"}:
-            return False
-        raise
-    return True
+def list_bucket_keys(client, bucket: str) -> set[str]:
+    keys = set()
+    continuation_token = None
+
+    while True:
+        kwargs = {"Bucket": bucket}
+        if continuation_token:
+            kwargs["ContinuationToken"] = continuation_token
+
+        response = client.list_objects_v2(**kwargs)
+        keys.update(item["Key"] for item in response.get("Contents", []))
+
+        if not response.get("IsTruncated"):
+            break
+        continuation_token = response.get("NextContinuationToken")
+
+    return keys
 
 
-def upload_csv_files(client, source_dir: Path, bucket: str) -> list[str]:
+def find_downloaded_csvs(source_dir: Path) -> dict[str, Path]:
+    return {csv_path.name: csv_path for csv_path in source_dir.rglob("*.csv")}
+
+
+def upload_expected_csv_files(
+    client,
+    source_dir: Path,
+    bucket: str,
+    expected_files: tuple[str, ...],
+) -> list[str]:
+    csvs_by_name = find_downloaded_csvs(source_dir)
+    missing_from_download = sorted(set(expected_files) - set(csvs_by_name))
+    if missing_from_download:
+        raise RuntimeError(
+            "Kaggle download did not contain expected files: "
+            + ", ".join(missing_from_download)
+        )
+
     uploaded = []
-    for csv_path in sorted(source_dir.glob("*.csv")):
-        key = csv_path.name
-        if object_exists(client, bucket, key):
-            continue
+    for key in expected_files:
+        csv_path = csvs_by_name[key]
         client.upload_file(str(csv_path), bucket, key)
         uploaded.append(key)
     return uploaded
 
 
-def bucket_has_expected_files(client, bucket: str) -> bool:
-    response = client.list_objects_v2(Bucket=bucket)
-    existing = {item["Key"] for item in response.get("Contents", [])}
-    return set(EXPECTED_RAW_FILES).issubset(existing)
+def missing_expected_files(client, bucket: str) -> list[str]:
+    existing = list_bucket_keys(client, bucket)
+    return sorted(set(EXPECTED_RAW_FILES) - existing)
 
 
 @dag(
@@ -92,25 +112,30 @@ def download_kaggle_to_minio():
         client = get_minio_client()
         ensure_buckets(client)
 
-        if bucket_has_expected_files(client, RAW_BUCKET):
-            return {
-                "bucket": RAW_BUCKET,
-                "uploaded": [],
-                "skipped": True,
-                "reason": "Bucket already contains expected Kaggle CSV files.",
-            }
+        with TemporaryDirectory() as tmpdir:
+            download_dir = Path(tmpdir)
+            source_path = Path(
+                kagglehub.competition_download(COMPETITION_NAME, output_dir=str(download_dir))
+            )
+            uploaded_files = upload_expected_csv_files(
+                client,
+                source_path,
+                RAW_BUCKET,
+                EXPECTED_RAW_FILES,
+            )
 
-        if any(LOCAL_RAW_DATA_DIR.glob("*.csv")):
-            uploaded_files = upload_csv_files(client, LOCAL_RAW_DATA_DIR, RAW_BUCKET)
-        else:
-            with TemporaryDirectory() as tmpdir:
-                download_dir = Path(tmpdir)
-                source_path = Path(
-                    kagglehub.competition_download(COMPETITION_NAME, output_dir=str(download_dir))
-                )
-                uploaded_files = upload_csv_files(client, source_path, RAW_BUCKET)
+        missing_files = missing_expected_files(client, RAW_BUCKET)
+        if missing_files:
+            raise RuntimeError(
+                "Bucket raw is still missing expected files: " + ", ".join(missing_files)
+            )
 
-        return {"bucket": RAW_BUCKET, "uploaded": uploaded_files, "skipped": False}
+        return {
+            "bucket": RAW_BUCKET,
+            "replaced": uploaded_files,
+            "skipped": False,
+            "missing_after_upload": [],
+        }
 
     download_and_upload()
 

@@ -67,3 +67,5 @@ devem ser armazenados no bucket `raw` do MinIO.
 
 Para inspecionar ou copiar arquivos entre MinIO e `Dados`, use o servico
 `minio-client`. Consulte `docs/minio-client.md`.
+
+Para detalhes das DAGs Airflow disponiveis, consulte `docs/dags/README.md`.

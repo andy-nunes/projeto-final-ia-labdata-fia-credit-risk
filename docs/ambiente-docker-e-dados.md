@@ -112,13 +112,14 @@ docker compose down -v
 A DAG manual `download_kaggle_to_minio` baixa os arquivos da competicao
 `home-credit-default-risk` e envia os CSVs para o bucket `raw` no MinIO.
 
-A DAG e idempotente pelo storage:
+A DAG sempre recarrega os dados brutos quando executada manualmente:
 
 - Garante a existencia dos buckets `raw`, `clean` e `abt`.
-- Se o bucket `raw` ja tiver os CSVs esperados, nao baixa novamente.
-- Se houver cache local em `Dados/raw`, envia esses arquivos para o bucket.
-- Se nao houver cache local, baixa em diretorio temporario e envia ao bucket
-  `raw`.
+- Baixa os dados da Kaggle em diretorio temporario.
+- Envia os 10 CSVs esperados para o bucket `raw`, substituindo objetos com o
+  mesmo nome quando eles ja existem.
+- Ao final, valida se os 10 CSVs esperados existem no bucket `raw`; se faltar
+  algum arquivo, a task falha explicitamente.
 
 Comando para disparar manualmente:
 
@@ -129,9 +130,8 @@ docker compose exec -T airflow airflow dags trigger download_kaggle_to_minio
 
 Resultado esperado:
 
-- Download do arquivo Kaggle de aproximadamente 688 MB quando `raw` ainda nao
-  estiver populado.
-- Upload dos CSVs extraidos para o bucket `raw`.
+- Download do arquivo Kaggle de aproximadamente 688 MB.
+- Replace dos CSVs extraidos no bucket `raw`.
 
 Arquivos baixados:
 

@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import os
 
-from airflow.decorators import dag, task
+from airflow.sdk import dag, task
 
 
 DATA_DIR = Path(os.getenv("DATA_DIR", "/opt/airflow/Dados"))
