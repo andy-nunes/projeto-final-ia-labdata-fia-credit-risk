@@ -1,2 +1,4 @@
 kagglehub
 boto3
+pytest
+pytest-mock

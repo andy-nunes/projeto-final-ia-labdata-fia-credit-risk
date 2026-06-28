@@ -9,3 +9,5 @@ python-dotenv
 pyarrow
 streamlit
 boto3
+pytest
+pytest-mock

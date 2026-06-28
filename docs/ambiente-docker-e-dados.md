@@ -384,9 +384,31 @@ Resultado relevante:
 download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
 ```
 
+## Camada Clean (Silver)
+
+A DAG manual `raw_to_clean_silver` lê oito CSVs do bucket `raw` e cria oito
+TaskGroups independentes. Cada grupo coleta e processa no staging, valida com as
+regras de `HMDR_Camada_Silver.ipynb` e só então publica no bucket `clean`.
+O fluxo operacional fica em `scripts/silver_pipeline.py`; regras puras ficam em
+`scripts/silver_transformations.py` e `scripts/silver_validations.py`.
+O processamento de `bureau_balance` usa chunks e escrita incremental Parquet
+para não carregar seus 27,3 milhões de linhas simultaneamente na memória.
+
+Os logs de QA usam `[PASS]`, `[WARNING]` e `[FAIL]`. Warnings seguem a lógica do
+notebook e não reprovam tasks. Falhas preservam o Parquet intermediário; uploads
+bem-sucedidos removem o staging da tabela.
+
+Consulte [`docs/camada-silver.md`](camada-silver.md) para a arquitetura completa,
+semantica de falhas, execucao pela CLI e testes pytest.
+
+```bash
+docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
+docker compose run --rm minio-client ls --recursive local/clean
+docker compose run --rm dev python scripts/silver_pipeline.py bureau
+```
+
 Ainda nao foram implementados:
 
-- Pipeline de limpeza em `DataPipeline`.
 - Geracao da ABT.
 - Treinamento em `Model/train.py`.
 - Predicao em `Model/predict.py`.

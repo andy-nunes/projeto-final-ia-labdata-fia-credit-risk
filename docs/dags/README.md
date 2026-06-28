@@ -4,6 +4,9 @@ Esta pasta documenta as DAGs Airflow do projeto. Todas as DAGs atuais sao
 manuais (`schedule=None`) e devem ser disparadas sob demanda pela interface do
 Airflow ou pela CLI.
 
+A arquitetura, a semantica de QA, o staging e a execucao direta da camada
+Silver estao detalhados em [`docs/camada-silver.md`](../camada-silver.md).
+
 As DAGs devem conter apenas a orquestracao. O codigo executavel usado pelo
 projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
 
@@ -12,6 +15,9 @@ projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
 - [`download_kaggle_to_minio`](download_kaggle_to_minio.md): baixa os dados
   brutos da competicao Home Credit Default Risk e substitui os CSVs no bucket
   `raw` do MinIO.
+- [`raw_to_clean_silver`](raw_to_clean_silver.md): transforma oito CSVs do
+  bucket `raw` em Parquets validados no bucket `clean`, com oito TaskGroups
+  independentes de três tasks.
 
 ## Comandos uteis
 
@@ -46,6 +52,12 @@ Ver arquivos no bucket `raw` depois de uma execucao:
 
 ```bash
 docker compose run --rm minio-client ls --recursive local/raw
+```
+
+Ver os Parquets gerados no bucket `clean`:
+
+```bash
+docker compose run --rm minio-client ls --recursive local/clean
 ```
 
 ## Logs das tasks

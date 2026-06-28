@@ -12,6 +12,8 @@ Home Credit Default Risk.
 3. Suba o ambiente com `docker compose build` e depois `docker compose up -d minio airflow streamlit`.
 4. Verifique os serviços em `http://localhost:8080`, `http://localhost:9001` e `http://localhost:8501`.
 5. Se quiser carregar os dados brutos, dispare a DAG `download_kaggle_to_minio` no Airflow.
+6. Para gerar a camada limpa, dispare `raw_to_clean_silver`; cada TaskGroup
+   processa, valida e publica uma tabela de forma isolada.
 
 Construa a imagem:
 
@@ -54,6 +56,25 @@ disparando manualmente a DAG `download_kaggle_to_minio` no Airflow:
 docker compose exec -T airflow airflow dags unpause download_kaggle_to_minio
 docker compose exec -T airflow airflow dags trigger download_kaggle_to_minio
 ```
+
+Execute os oito pipelines Silver. Cada tabela possui um TaskGroup isolado com
+`coletar_e_processar -> validar -> escrever_clean`; o bucket `clean` só recebe
+Parquets aprovados:
+
+```bash
+docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
+```
+
+O pipeline completo também pode ser executado diretamente para todas as tabelas
+ou para uma seleção:
+
+```bash
+docker compose run --rm dev python scripts/silver_pipeline.py bureau application_train
+```
+
+O QA registra `[PASS]`, `[WARNING]` e `[FAIL]`. Somente `[FAIL]` bloqueia a
+publicação da tabela. O staging aprovado é removido após o upload; staging
+reprovado permanece em `Dados/.silver_staging` para diagnóstico.
 
 Na inicializacao do Streamlit sao criados os buckets `raw`, `clean` e `abt`.
 
