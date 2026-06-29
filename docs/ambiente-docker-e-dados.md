@@ -1,6 +1,6 @@
 # Ambiente Docker e Dados
 
-Data do registro: 2026-06-23
+Data da ultima atualizacao: 2026-06-29
 
 ## Contexto do Projeto
 
@@ -73,8 +73,8 @@ A imagem customizada do Airflow usa:
 
 ## Docker Compose
 
-O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio` e
-`streamlit`.
+O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
+`minio-client` e `streamlit`.
 
 ### Primeiros passos
 
@@ -84,6 +84,8 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio` e
 4. Suba os servicos com `docker compose up -d minio airflow streamlit`.
 5. Acesse Airflow, MinIO e Streamlit nos enderecos locais.
 6. Para carregar os CSVs no bucket `raw`, dispare a DAG `download_kaggle_to_minio`.
+7. Para promover os dados para `clean`, dispare `raw_to_clean_silver`.
+8. Para construir a ABT final no bucket `abt`, dispare `clean_to_abt_gold`.
 
 Comportamento do servico `dev`:
 
@@ -253,6 +255,8 @@ Resultado relevante:
 
 ```text
 download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
+raw_to_clean_silver      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
+clean_to_abt_gold        | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
 ```
 
 Se uma DAG existir em `dags/` mas nao aparecer na listagem depois de uma subida
@@ -275,9 +279,9 @@ download_and_upload | success
 
 ## Estado Atual
 
-O projeto possui um ambiente Docker funcional para desenvolvimento Python e um
-fluxo reproduzivel para baixar os dados brutos do Kaggle e armazena-los no
-bucket `raw` do MinIO.
+O projeto possui um ambiente Docker funcional e um fluxo reproduzivel de dados
+em tres camadas: carga bruta no bucket `raw`, promocao validada para `clean` e
+construcao da ABT de treino em `abt/abt_train.parquet`.
 
 ## Servicos Locais
 
@@ -285,6 +289,7 @@ Foram adicionados servicos locais para a etapa de arquitetura/MLOps:
 
 - `airflow`: orquestracao de pipelines.
 - `minio`: storage S3-compativel local.
+- `minio-client`: cliente auxiliar para inspecionar e copiar objetos.
 - `streamlit`: app web inicial para visualizar o volume de dados e testar
   conectividade com MinIO.
 
@@ -310,6 +315,7 @@ Montagem da pasta `Dados`:
 
 - Airflow: `/opt/airflow/Dados`
 - MinIO: `/Dados`
+- MinIO Client: `/Dados`
 - Streamlit: `/app/Dados`
 
 O app inicial do Streamlit esta em `app/streamlit_app.py` e lista os arquivos do
@@ -382,6 +388,8 @@ Resultado relevante:
 
 ```text
 download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
+raw_to_clean_silver      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
+clean_to_abt_gold        | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
 ```
 
 ## Camada Clean (Silver)
@@ -407,9 +415,30 @@ docker compose run --rm minio-client ls --recursive local/clean
 docker compose run --rm dev python scripts/silver_pipeline.py bureau
 ```
 
+## Camada Gold (ABT)
+
+A DAG manual `clean_to_abt_gold` consome sete Parquets do bucket `clean` e
+executa 17 tasks sequenciais em sete TaskGroups. Cada origem é processada e
+validada antes da próxima; o grupo final monta, valida e publica
+`abt/abt_train.parquet`.
+
+DataFrames intermediários são Parquets locais em
+`Dados/.gold_staging/<run_id>`. O XCom recebe somente caminhos e metadados. Uma
+falha preserva o staging e impede o upload; sucesso remove todo o staging da
+execução. A validação final exige exatamente 307.511 clientes e preservação do
+`TARGET`.
+
+```bash
+docker compose exec -T airflow airflow dags trigger clean_to_abt_gold
+docker compose run --rm dev python scripts/gold_pipeline.py
+docker compose run --rm minio-client stat local/abt/abt_train.parquet
+```
+
+Consulte [`docs/dags/clean_to_abt_gold.md`](dags/clean_to_abt_gold.md) para o
+grafo, entradas, QA e comportamento operacional.
+
 Ainda nao foram implementados:
 
-- Geracao da ABT.
 - Treinamento em `Model/train.py`.
 - Predicao em `Model/predict.py`.
 - App Streamlit final de predicao.

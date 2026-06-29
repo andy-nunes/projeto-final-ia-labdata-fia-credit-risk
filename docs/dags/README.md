@@ -6,6 +6,8 @@ Airflow ou pela CLI.
 
 A arquitetura, a semantica de QA, o staging e a execucao direta da camada
 Silver estao detalhados em [`docs/camada-silver.md`](../camada-silver.md).
+O desenho e o contrato operacional da camada Gold estao em
+[`docs/camada-gold-abt-design.md`](../camada-gold-abt-design.md).
 
 As DAGs devem conter apenas a orquestracao. O codigo executavel usado pelo
 projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
@@ -18,6 +20,9 @@ projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
 - [`raw_to_clean_silver`](raw_to_clean_silver.md): transforma oito CSVs do
   bucket `raw` em Parquets validados no bucket `clean`, com oito TaskGroups
   independentes de três tasks.
+- [`clean_to_abt_gold`](clean_to_abt_gold.md): agrega sete Parquets do bucket
+  `clean` em uma ABT validada no bucket `abt`, com sete TaskGroups e 17 tasks
+  sequenciais.
 
 ## Comandos uteis
 
@@ -58,6 +63,27 @@ Ver os Parquets gerados no bucket `clean`:
 
 ```bash
 docker compose run --rm minio-client ls --recursive local/clean
+```
+
+Ver a ABT final:
+
+```bash
+docker compose run --rm minio-client stat local/abt/abt_train.parquet
+```
+
+Executar os pipelines fora do Airflow, mantendo a mesma logica importada pelas
+DAGs:
+
+```bash
+docker compose run --rm dev python scripts/silver_pipeline.py
+docker compose run --rm dev python scripts/gold_pipeline.py
+```
+
+Validar a suite e o carregamento das DAGs:
+
+```bash
+docker compose exec -T airflow python -m pytest /opt/airflow/tests -q
+docker compose exec -T airflow airflow dags list-import-errors
 ```
 
 ## Logs das tasks

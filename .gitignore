@@ -220,6 +220,7 @@ __marimo__/
 # Project data
 *.csv
 Dados/.silver_staging
+Dados/.gold_staging
 *.parquet
 
 # Airflow runtime logs
