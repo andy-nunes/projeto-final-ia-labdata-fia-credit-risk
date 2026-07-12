@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600" role="img" aria-labelledby="title desc">
+  <title id="title">Arquitetura MLOps - Home Credit Default Risk</title>
+  <desc id="desc">Diagrama arquitetural do projeto mostrando ingestao, ETL, MinIO, treinamento LightGBM, FastAPI e Streamlit.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2937"/>
+    </marker>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="124%">
+      <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .bg { fill: #f7f8fb; }
+      .title { font: 700 40px Arial, sans-serif; fill: #111827; letter-spacing: 0; }
+      .subtitle { font: 400 20px Arial, sans-serif; fill: #4b5563; letter-spacing: 0; }
+      .lane-title { font: 700 23px Arial, sans-serif; fill: #111827; letter-spacing: 0; }
+      .lane-note { font: 400 15px Arial, sans-serif; fill: #6b7280; letter-spacing: 0; }
+      .box-title { font: 700 20px Arial, sans-serif; fill: #111827; letter-spacing: 0; }
+      .box-text { font: 400 15px Arial, sans-serif; fill: #374151; letter-spacing: 0; }
+      .small { font: 400 13px Arial, sans-serif; fill: #4b5563; letter-spacing: 0; }
+      .pill { font: 700 13px Arial, sans-serif; fill: #ffffff; letter-spacing: 0; }
+      .line { stroke: #1f2937; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .soft-line { stroke: #64748b; stroke-width: 2.5; fill: none; marker-end: url(#arrow); stroke-dasharray: 8 8; }
+      .lane { fill: #ffffff; stroke: #e5e7eb; stroke-width: 2; rx: 18; filter: url(#shadow); }
+      .source { fill: #e8f5ef; stroke: #10b981; stroke-width: 2; rx: 14; }
+      .airflow { fill: #fff4e5; stroke: #f59e0b; stroke-width: 2; rx: 14; }
+      .minio { fill: #eef2ff; stroke: #6366f1; stroke-width: 2; rx: 14; }
+      .etl { fill: #f0f9ff; stroke: #0ea5e9; stroke-width: 2; rx: 14; }
+      .model { fill: #fdf2f8; stroke: #db2777; stroke-width: 2; rx: 14; }
+      .serving { fill: #f3f4f6; stroke: #475569; stroke-width: 2; rx: 14; }
+      .governance { fill: #ecfdf5; stroke: #059669; stroke-width: 2; rx: 14; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1600"/>
+  <text class="title" x="80" y="76">Arquitetura MLOps - Motor de Decisao de Credito</text>
+  <text class="subtitle" x="80" y="112">ETL no Airflow, Data Lake MinIO, modelo LightGBM e serving via FastAPI + Streamlit</text>
+
+  <rect class="lane" x="70" y="150" width="1460" height="210"/>
+  <rect x="100" y="170" width="74" height="25" rx="12" fill="#10b981"/>
+  <text class="pill" x="117" y="188">Dados</text>
+  <text class="lane-title" x="100" y="220">1. Ingestao e camada Raw</text>
+  <text class="lane-note" x="100" y="246">Carga manual da competicao Home Credit para o bucket raw do MinIO.</text>
+
+  <rect class="source" x="105" y="278" width="260" height="58"/>
+  <text class="box-title" x="126" y="303">Kaggle</text>
+  <text class="box-text" x="126" y="324">Home Credit Default Risk</text>
+  <rect class="airflow" x="480" y="270" width="310" height="74"/>
+  <text class="box-title" x="502" y="298">Airflow DAG</text>
+  <text class="box-text" x="502" y="322">download_kaggle_to_minio</text>
+  <rect class="minio" x="905" y="270" width="270" height="74"/>
+  <text class="box-title" x="927" y="298">Bucket raw</text>
+  <text class="box-text" x="927" y="322">CSVs originais</text>
+  <line class="line" x1="365" y1="307" x2="480" y2="307"/>
+  <line class="line" x1="790" y1="307" x2="905" y2="307"/>
+
+  <rect class="lane" x="70" y="395" width="1460" height="350"/>
+  <rect x="100" y="415" width="95" height="25" rx="12" fill="#0ea5e9"/>
+  <text class="pill" x="117" y="433">Pipeline</text>
+  <text class="lane-title" x="100" y="465">2. ETL Silver e Gold</text>
+  <text class="lane-note" x="100" y="491">DAGs finas chamam scripts reutilizaveis para limpeza, validacao, QA e feature engineering.</text>
+
+  <rect class="airflow" x="105" y="535" width="280" height="72"/>
+  <text class="box-title" x="127" y="563">Airflow DAG</text>
+  <text class="box-text" x="127" y="586">raw_to_clean_silver</text>
+  <rect class="etl" x="500" y="535" width="300" height="72"/>
+  <text class="box-title" x="522" y="563">Silver Pipeline</text>
+  <text class="box-text" x="522" y="586">limpeza, QA e staging</text>
+  <rect class="minio" x="915" y="535" width="255" height="72"/>
+  <text class="box-title" x="937" y="563">Bucket clean</text>
+  <text class="box-text" x="937" y="586">8 parquets tratados</text>
+  <line class="line" x1="385" y1="571" x2="500" y2="571"/>
+  <line class="line" x1="800" y1="571" x2="915" y2="571"/>
+
+  <rect class="airflow" x="105" y="645" width="280" height="72"/>
+  <text class="box-title" x="127" y="673">Airflow DAG</text>
+  <text class="box-text" x="127" y="696">clean_to_abt_gold</text>
+  <rect class="etl" x="500" y="645" width="300" height="72"/>
+  <text class="box-title" x="522" y="673">Gold Pipeline</text>
+  <text class="box-text" x="522" y="696">agregacoes e features</text>
+  <rect class="minio" x="915" y="645" width="255" height="72"/>
+  <text class="box-title" x="937" y="673">Bucket abt</text>
+  <text class="box-text" x="937" y="696">abt_train.parquet</text>
+  <line class="line" x1="385" y1="681" x2="500" y2="681"/>
+  <line class="line" x1="800" y1="681" x2="915" y2="681"/>
+  <path class="soft-line" d="M 1040 344 C 1040 425, 245 455, 245 535"/>
+  <path class="soft-line" d="M 1042 607 C 1042 625, 245 625, 245 645"/>
+
+  <rect class="lane" x="70" y="780" width="1460" height="270"/>
+  <rect x="100" y="800" width="84" height="25" rx="12" fill="#db2777"/>
+  <text class="pill" x="117" y="818">Modelo</text>
+  <text class="lane-title" x="100" y="850">3. Treinamento e artefatos</text>
+  <text class="lane-note" x="100" y="876">LightGBM treina com a ABT e regras centralizadas de features, metricas e threshold.</text>
+
+  <rect class="governance" x="105" y="920" width="285" height="76"/>
+  <text class="box-title" x="127" y="949">model_config.yaml</text>
+  <text class="box-text" x="127" y="972">features, F2, threshold</text>
+  <rect class="airflow" x="475" y="920" width="260" height="76"/>
+  <text class="box-title" x="497" y="949">Airflow DAG</text>
+  <text class="box-text" x="497" y="972">train_lightgbm</text>
+  <rect class="model" x="820" y="920" width="260" height="76"/>
+  <text class="box-title" x="842" y="949">LightGBM</text>
+  <text class="box-text" x="842" y="972">PR-AUC, F2 e recall</text>
+  <rect class="minio" x="1165" y="905" width="275" height="106"/>
+  <text class="box-title" x="1187" y="936">Bucket artifacts</text>
+  <text class="box-text" x="1187" y="961">lightgbm_hcdr.pkl</text>
+  <text class="small" x="1187" y="984">model_metadata.json</text>
+  <line class="line" x1="390" y1="958" x2="475" y2="958"/>
+  <line class="line" x1="735" y1="958" x2="820" y2="958"/>
+  <line class="line" x1="1080" y1="958" x2="1165" y2="958"/>
+  <path class="soft-line" d="M 1042 717 C 1042 785, 605 830, 605 920"/>
+
+  <rect class="lane" x="70" y="1085" width="1460" height="390"/>
+  <rect x="100" y="1105" width="82" height="25" rx="12" fill="#475569"/>
+  <text class="pill" x="117" y="1123">Serving</text>
+  <text class="lane-title" x="100" y="1155">4. Serving, simulacao e explicabilidade</text>
+  <text class="lane-note" x="100" y="1181">A API carrega modelo, ABT e configuracao; o dashboard oferece simulacao What-If para a mesa de credito.</text>
+
+  <rect class="governance" x="105" y="1235" width="230" height="80"/>
+  <text class="box-title" x="127" y="1265">Usuario</text>
+  <text class="box-text" x="127" y="1288">analista ou mesa</text>
+  <rect class="serving" x="430" y="1235" width="285" height="80"/>
+  <text class="box-title" x="452" y="1265">Streamlit Dashboard</text>
+  <text class="box-text" x="452" y="1288">simulacao e dossie</text>
+  <rect class="serving" x="810" y="1235" width="235" height="80"/>
+  <text class="box-title" x="832" y="1265">FastAPI</text>
+  <text class="box-text" x="832" y="1288">/client e /score</text>
+  <rect class="serving" x="1140" y="1235" width="300" height="80"/>
+  <text class="box-title" x="1162" y="1265">scripts/predict.py</text>
+  <text class="box-text" x="1162" y="1288">overrides, SHAP e risk band</text>
+  <line class="line" x1="335" y1="1275" x2="430" y2="1275"/>
+  <line class="line" x1="715" y1="1275" x2="810" y2="1275"/>
+  <line class="line" x1="1045" y1="1275" x2="1140" y2="1275"/>
+
+  <rect class="serving" x="430" y="1355" width="285" height="76"/>
+  <text class="box-title" x="452" y="1384">Catalogo ABT</text>
+  <text class="box-text" x="452" y="1407">features pesquisaveis</text>
+  <path class="soft-line" d="M 1042 717 C 1015 910, 928 1070, 928 1235"/>
+  <path class="soft-line" d="M 1302 1011 C 1302 1120, 960 1140, 928 1235"/>
+  <path class="soft-line" d="M 248 996 C 248 1120, 1185 1120, 1290 1235"/>
+  <path class="soft-line" d="M 1042 717 C 920 1040, 602 1190, 572 1355"/>
+  <path class="soft-line" d="M 248 996 C 300 1190, 510 1240, 572 1355"/>
+
+  <text class="small" x="90" y="1530">Setas solidas: fluxo principal de dados, artefatos e chamadas. Setas tracejadas: consumo de ABT, modelo ou configuracao em runtime.</text>
+  <text class="small" x="90" y="1554">Camadas MinIO: raw para CSVs brutos, clean para parquets tratados, abt para tabela analitica e artifacts para modelo treinado.</text>
+</svg>
