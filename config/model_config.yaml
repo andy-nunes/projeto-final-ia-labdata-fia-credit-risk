@@ -1,0 +1,144 @@
+# Configuração central do modelo LightGBM — editável na avaliação individual.
+# Consumido por: abt_to_model_lightgbm.ipynb, scripts/abt_to_model_lightgbm.py, scripts/predict.py, app/dashboard.py
+
+project:
+  # Nome de registro do projeto para governança de MLOps
+  name: home-credit-default-risk
+  # Variável alvo (o gabarito de inadimplência que o modelo tenta prever)
+  target_column: TARGET
+  # Chave primária do cliente (usada para buscas, nunca para treinamento)
+  id_column: SK_ID_CURR
+
+reproducibility:
+  # Semente fixa para garantir que os mesmos dados gerem os mesmos resultados (seed)
+  random_state: 42
+  # Validação de integridade: volume exato de linhas esperado na ABT original
+  full_dataset_rows: 307511
+
+splits:
+  # Percentual da base destinado ao aprendizado do algoritmo (80%)
+  train: 0.80
+  # Percentual da base destinado à validação técnica do modelo (19.9%)
+  test: 0.199
+  # Percentual isolado estritamente para a simulação na interface gráfica (0.1%)
+  demo_holdout: 0.001
+
+business:
+  # Peso dado ao Recall sobre a Precision (F2 penaliza mais os Falsos Negativos/Calotes)
+  f_beta: 2
+  # Métrica primária de otimização durante o treinamento (Area Under Precision-Recall Curve)
+  primary_metric: pr_auc
+
+business_rules:
+  # Régua de corte operacional: probabilidades acima de 8% (0.08) são classificadas como Reprovado (1)
+  business_threshold: 0.08
+
+features:
+  # Indica qual conjunto de features está ativo no pipeline atual
+  set: full
+  drop_cols:
+    # Colunas sumariamente ignoradas pelo modelo para evitar Data Leakage ou ruído
+    - SK_ID_CURR
+    - TARGET
+  categorical_features:
+    # Aviso explícito ao LightGBM sobre quais colunas devem ser tratadas como texto/categorias
+    - NAME_EDUCATION_TYPE
+    - NAME_INCOME_TYPE
+    - OCCUPATION_TYPE
+    - CODE_GENDER
+    - NAME_CONTRACT_TYPE
+    - NAME_FAMILY_STATUS
+    - NAME_HOUSING_TYPE
+    - FLAG_OWN_CAR
+    - FLAG_OWN_REALTY
+  editable_features:
+    # Variáveis que o gerente de negócios tem permissão para alterar (What-If) no Streamlit
+    - AMT_CREDIT
+    - AMT_ANNUITY
+    - NAME_EDUCATION_TYPE
+    - NAME_INCOME_TYPE
+    - OCCUPATION_TYPE
+    - ORGANIZATION_TYPE
+  readonly_features:
+    # Variáveis de contexto exibidas no Streamlit apenas em formato de leitura (não editáveis)
+    - EXT_SOURCE_1
+    - EXT_SOURCE_2
+    - EXT_SOURCE_3
+    - DAYS_BIRTH
+    - DAYS_EMPLOYED
+    - DAYS_ID_PUBLISH
+    - EXT_SOURCE_MEAN
+    - EXT_SOURCE_CNT
+    - FLAG_EMPLOYED
+    - DAYS_EMPLOYED_YEARS
+    - BUREAU_AMT_DEBT_SUM
+    - BUREAU_DAYS_CREDIT_MIN
+    - PREV_DAYS_DECISION_MIN
+    - INST_DIAS_ATRASO_MEAN
+    - INST_AMT_PAYMENT_SUM
+  core:
+    # Bloco lógico de features nativas e essenciais do bureau de crédito
+    - EXT_SOURCE_1
+    - EXT_SOURCE_2
+    - EXT_SOURCE_3
+    - DAYS_BIRTH
+    - DAYS_EMPLOYED
+    - DAYS_ID_PUBLISH
+    - AMT_CREDIT
+    - AMT_ANNUITY
+    - NAME_EDUCATION_TYPE
+    - NAME_INCOME_TYPE
+  extended_extra:
+    # Bloco lógico de features derivadas (Feature Engineering criado pela equipe)
+    - EXT_SOURCE_MEAN
+    - EXT_SOURCE_CNT
+    - FLAG_EMPLOYED
+    - DAYS_EMPLOYED_YEARS
+    - OCCUPATION_TYPE
+    - BUREAU_AMT_DEBT_SUM
+    - BUREAU_DAYS_CREDIT_MIN
+    - PREV_DAYS_DECISION_MIN
+    - INST_DIAS_ATRASO_MEAN
+    - INST_AMT_PAYMENT_SUM
+
+model:
+  # Motor matemático utilizado para a classificação
+  algorithm: lightgbm
+  # Quantidade total de árvores de decisão que compõem o modelo (boosting rounds)
+  n_estimators: 300
+  # Número máximo de folhas por árvore (controla a complexidade geométrica)
+  num_leaves: 31
+  # Passo de aprendizado (taxa de correção de erro de uma árvore para a próxima)
+  learning_rate: 0.05
+  # Profundidade máxima da árvore (-1 significa expansão sem limite estrutural, focando nas folhas)
+  max_depth: -1
+  # Amostragem de linhas: usa 80% dos dados por árvore para evitar overfitting
+  subsample: 0.8
+  # Amostragem de colunas: usa 80% das colunas por árvore para forçar diversidade no aprendizado
+  colsample_bytree: 0.8
+
+paths:
+  # Caminhos relativos de leitura/escrita quando operando no sistema de arquivos local
+  abt_path: Dados/abt/abt_train.parquet
+  demo_holdout_path: Dados/abt/abt_demo_holdout.parquet
+  model_artifact_path: artifacts/lightgbm_hcdr.pkl
+  metadata_path: artifacts/model_metadata.json
+  # Caminhos espelhados para leitura/escrita no Data Lake (MinIO/S3) via pipeline
+  abt_path_s3: s3://abt/abt_train.parquet
+  model_artifact_path_s3: s3://artifacts/lightgbm_hcdr.pkl
+  metadata_path_s3: s3://artifacts/model_metadata.json
+
+api:
+  # Endereço de roteamento interno do Docker para o frontend acessar o backend
+  base_url: http://host.docker.internal:8000
+
+minio:
+  # Credenciais e endpoint para o armazenamento de objetos compatível com S3
+  endpoint_url: http://minio:9000
+  key: minioadmin
+  secret: minioadmin
+
+metadata:
+  # Versionamento e documentação do artefato gerado para rastreabilidade
+  version: "1.0.0"
+  description: "LightGBM treinado na ABT full conforme notebook de seleção de modelo"

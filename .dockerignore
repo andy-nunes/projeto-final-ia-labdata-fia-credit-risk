@@ -1,11 +1,32 @@
 .git
+.gitignore
 .venv
+venv/
+env/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.vscode/
+.idea/
 .DS_Store
-Dados/raw/
+**/.DS_Store
+
+# Artefatos locais montados em runtime pelo Docker Compose ou recriados pelas DAGs.
+# Nao copie dados para a imagem: isso infla o build context e pode embutir dados
+# defasados em imagens que devem consumir MinIO/volumes.
+Dados/
+artifacts/
+logs/
+plugins/
 competition/
+
+# Dados, modelos e relatorios exportados localmente.
 *.csv
+*.parquet
+*.pkl
+*.joblib
+*.ipynb
+*.html
+*.pptx

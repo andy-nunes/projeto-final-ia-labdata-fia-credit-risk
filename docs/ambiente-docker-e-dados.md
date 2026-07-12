@@ -50,7 +50,7 @@ Principais bibliotecas instaladas:
 - `kagglehub`
 - `numpy`
 - `pandas`
-- `scikit-learn`
+- `scikit-learn==1.7.2`
 - `matplotlib`
 - `seaborn`
 - `jupyterlab`
@@ -81,8 +81,8 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
 1. Instale Docker e Docker Compose na maquina local.
 2. Configure `~/.kaggle/kaggle.json` com as credenciais da Kaggle.
 3. Rode `docker compose build`.
-4. Suba os servicos com `docker compose up -d minio airflow streamlit`.
-5. Acesse Airflow, MinIO e Streamlit nos enderecos locais.
+4. Suba os servicos com `docker compose up -d minio airflow api streamlit`.
+5. Acesse Airflow, MinIO, API e Streamlit nos enderecos locais.
 6. Para carregar os CSVs no bucket `raw`, dispare a DAG `download_kaggle_to_minio`.
 7. Para promover os dados para `clean`, dispare `raw_to_clean_silver`.
 8. Para construir a ABT final no bucket `abt`, dispare `clean_to_abt_gold`.
@@ -95,6 +95,21 @@ Comportamento do servico `dev`:
 - Define `PYTHONPATH=/app`.
 - Abre `bash` por padrao.
 
+Comportamento do servico `streamlit`:
+
+- Sobe `app/dashboard.py` na porta `8501`.
+- Executa `scripts/ensure_minio_buckets.py` antes da aplicacao para garantir
+  os buckets `raw`, `clean`, `abt` e `artifacts`.
+- Define `API_BASE_URL=http://api:8000` para consumir a API FastAPI pela rede
+  interna do Compose.
+
+Comportamento do servico `api`:
+
+- Sobe `app/main.py` com `uvicorn` na porta `8000`.
+- Carrega o modelo em `s3://artifacts/lightgbm_hcdr.pkl`.
+- Usa o holdout local em `Dados/abt/abt_demo_holdout.parquet` para buscar
+  dossies por `SK_ID_CURR`.
+
 Comportamento do servico `airflow`:
 
 - Monta `./dags` em `/opt/airflow/dags`.
@@ -105,6 +120,9 @@ Comportamento do servico `airflow`:
   `AIRFLOW__CORE__HOSTNAME_CALLABLE=scripts.airflow_config.get_airflow_hostname`
   para que os logs das tasks usem um host valido no servidor interno da porta
   `8793`.
+- Define `ABT_PATH=s3://abt/abt_train.parquet`, `MODEL_PATH=s3://artifacts/lightgbm_hcdr.pkl`
+  e `MODEL_METADATA_PATH=s3://artifacts/model_metadata.json` para que a DAG
+  `train_lightgbm` leia a ABT e publique os artefatos de modelo no MinIO.
 - Executa `airflow db migrate` e `airflow dags reserialize` antes do
   `airflow standalone`, garantindo que as DAGs sejam registradas no banco local
   em clones novos.
@@ -132,7 +150,7 @@ A DAG manual `download_kaggle_to_minio` baixa os arquivos da competicao
 
 A DAG sempre recarrega os dados brutos quando executada manualmente:
 
-- Garante a existencia dos buckets `raw`, `clean` e `abt`.
+- Garante a existencia dos buckets `raw`, `clean`, `abt` e `artifacts`.
 - Baixa os dados da Kaggle em diretorio temporario.
 - Envia os 10 CSVs esperados para o bucket `raw`, substituindo objetos com o
   mesmo nome quando eles ja existem.
@@ -290,13 +308,14 @@ Foram adicionados servicos locais para a etapa de arquitetura/MLOps:
 - `airflow`: orquestracao de pipelines.
 - `minio`: storage S3-compativel local.
 - `minio-client`: cliente auxiliar para inspecionar e copiar objetos.
-- `streamlit`: app web inicial para visualizar o volume de dados e testar
-  conectividade com MinIO.
+- `api`: backend FastAPI de escoragem de credito.
+- `streamlit`: dashboard web da mesa de crédito, implementado em
+  `app/dashboard.py`.
 
 Comando para subir os servicos:
 
 ```bash
-docker compose up -d minio airflow streamlit
+docker compose up -d minio airflow api streamlit
 ```
 
 Acessos:
@@ -304,6 +323,7 @@ Acessos:
 - Airflow: `http://localhost:8080`
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
+- API FastAPI: `http://localhost:8000`
 - Streamlit: `http://localhost:8501`
 
 Credenciais locais de desenvolvimento:
@@ -318,8 +338,81 @@ Montagem da pasta `Dados`:
 - MinIO Client: `/Dados`
 - Streamlit: `/app/Dados`
 
-O app inicial do Streamlit esta em `app/streamlit_app.py` e lista os arquivos do
-volume `Dados`, alem de testar uma conexao S3 com o MinIO via `boto3`.
+O app do Streamlit esta em `app/dashboard.py`. Ele atua como cliente da API
+FastAPI configurada em `config/model_config.yaml` (`api.base_url`) e e a
+homepage oficial do painel da mesa de credito.
+
+### Dashboard Streamlit
+
+O painel apresenta o motor de decisao de credito com dados Home Credit, modelo
+LightGBM e API de escoragem.
+
+A homepage tem um link para a pagina `app/pages/catalogo_abt.py`. Essa pagina
+exibe um catalogo pesquisavel das colunas da ABT com nome, tipo, categoria,
+fonte, descricao, marcacao de entrada no modelo, marcacao de campo editavel e
+marcacao de categorica do modelo. A montagem fica em `app/abt_catalog.py`,
+usando o schema de `Dados/abt/abt_train.parquet`, o arquivo
+`config/model_config.yaml` e o dicionario oficial
+`Dados/raw/HomeCredit_columns_description.csv`, que vem do pacote de dados da
+competicao Home Credit Default Risk no Kaggle. Colunas derivadas da camada Gold
+recebem descricao inferida pela regra de criacao ou pelo prefixo da fonte
+agregada. A busca, os filtros de categoria/fonte, a tabela e o download rodam
+client-side em um componente HTML/JavaScript, nao como widgets Streamlit como
+`text_input`, `selectbox`, `multiselect`, `download_button` ou `dataframe`,
+porque widgets interativos causaram crashes nativos `Exited (139)` no runtime
+do Streamlit ao rerenderizar a pagina. A documentacao especifica fica em
+`docs/catalogo-abt.md`.
+
+Os campos editaveis sao definidos em `config/model_config.yaml`. Atualmente o
+dashboard permite simular `AMT_CREDIT`, `AMT_ANNUITY`, `NAME_EDUCATION_TYPE`,
+`NAME_INCOME_TYPE`, `OCCUPATION_TYPE` e `ORGANIZATION_TYPE`. Os campos
+categoricos aparecem como selecao quando existe uma lista controlada de
+categorias; `ORGANIZATION_TYPE` usa o rotulo de negocio "Tipo de Organização /
+Setor".
+
+Os campos monetarios `AMT_CREDIT` (Valor Solicitado) e `AMT_ANNUITY` (Valor da
+Parcela Mensal) sao renderizados como campos de texto, nao como `number_input`.
+Essa escolha remove os controles incrementais `- / +` do Streamlit e deixa a
+validacao sob controle da aplicacao.
+
+Validacao aplicada aos dois campos:
+
+- aceita valores inteiros ou decimais, incluindo virgula decimal;
+- rejeita vazio, texto, zero, negativos e valores fora do intervalo;
+- limite inferior: `1`;
+- limite superior de `AMT_CREDIT`: `4.050.000,00`;
+- limite superior de `AMT_ANNUITY`: `258.025,50`.
+
+Os limites superiores foram calculados a partir do arquivo `abt_train.parquet`,
+tomando o maior valor observado em cada coluna da ABT de treino:
+
+```text
+AMT_CREDIT  max = 4050000.0
+AMT_ANNUITY max = 258025.5
+```
+
+A justificativa para usar esses tetos e evitar extrapolacao fora do dominio de
+treinamento do modelo. O LightGBM foi ajustado com exemplos ate esses valores;
+permitir simulacoes acima desse intervalo levaria a uma regiao sem evidencia
+historica na ABT atual, reduzindo a confiabilidade operacional do score e da
+explicabilidade local. O limite inferior `1` impede simulacoes sem valor
+economico valido, como zero ou negativo, que tambem nao representam uma
+proposta de credito realista.
+
+Depois de aplicar overrides, a API recalcula no caminho de inferencia online as
+derivadas financeiras que dependem diretamente dos valores simulados:
+`CREDIT_INCOME_RATIO`, `ANNUITY_INCOME_RATIO` e `LOG_AMT_CREDIT`. Esse
+comportamento fica em `scripts/predict.py` e evita que o modelo receba um valor
+monetario novo junto com ratios antigos congelados da ABT. O recálculo nao altera
+os pipelines offline Silver/Gold.
+
+Os cards de resultado sao padronizados por risco. `Risk Band`,
+`Prob. inadimplencia` e `Prob. adimplencia` usam lateral verde para baixo
+risco, amarela para risco moderado, vermelha para alto risco e cinza para valor
+ausente ou desconhecido. A faixa vem de `scripts/predict.py`: com o threshold
+de negocio atual de `8%`, `Baixo risco` fica abaixo de `3,2%`, `Risco
+moderado` fica de `3,2%` ate abaixo de `8%`, e `Alto risco` fica em `8%` ou
+mais.
 
 ### Buckets do MinIO
 
@@ -331,6 +424,7 @@ Buckets criados:
 - `raw`
 - `clean`
 - `abt`
+- `artifacts`
 
 O sincronismo automatico da pasta local `Dados` para buckets foi removido. A
 carga de dados brutos agora acontece pela DAG `download_kaggle_to_minio`, que
@@ -377,7 +471,7 @@ docker compose run --rm dev python -c "import boto3, os; from botocore.client im
 
 Resultados:
 
-- Buckets incluem `raw`, `clean` e `abt`.
+- Buckets incluem `raw`, `clean`, `abt` e `artifacts`.
 - Bucket `raw` contem os 10 CSVs esperados.
 
 ```bash

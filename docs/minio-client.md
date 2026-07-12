@@ -82,7 +82,7 @@ projeto e a DAG `download_kaggle_to_minio`.
 
 ## Casos de uso
 
-- Conferir rapidamente se os buckets `raw`, `clean` e `abt` existem.
+- Conferir rapidamente se os buckets `raw`, `clean`, `abt` e `artifacts` existem.
 - Verificar quais CSVs foram carregados pela DAG `download_kaggle_to_minio`.
 - Baixar uma copia local de `raw` para explorar os dados fora dos containers.
 - Subir arquivos pontuais para testes manuais de pipeline.

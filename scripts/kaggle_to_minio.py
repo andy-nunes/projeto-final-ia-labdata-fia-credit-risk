@@ -14,7 +14,7 @@ RAW_BUCKET = os.getenv("RAW_BUCKET", "raw")
 MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
-PROJECT_BUCKETS: tuple[str, ...] = ("raw", "clean", "abt")
+PROJECT_BUCKETS: tuple[str, ...] = ("raw", "clean", "abt", "artifacts")
 EXPECTED_RAW_FILES: tuple[str, ...] = (
     "HomeCredit_columns_description.csv",
     "POS_CASH_balance.csv",

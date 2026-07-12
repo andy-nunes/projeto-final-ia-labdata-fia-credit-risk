@@ -23,6 +23,8 @@ projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
 - [`clean_to_abt_gold`](clean_to_abt_gold.md): agrega sete Parquets do bucket
   `clean` em uma ABT validada no bucket `abt`, com sete TaskGroups e 17 tasks
   sequenciais.
+- [`train_lightgbm`](train_lightgbm.md): treina o modelo a partir da ABT no
+  bucket `abt` e publica modelo e metadados no bucket `artifacts`.
 
 ## Comandos uteis
 
@@ -69,6 +71,12 @@ Ver a ABT final:
 
 ```bash
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
+```
+
+Ver os artefatos do modelo:
+
+```bash
+docker compose run --rm minio-client ls --recursive local/artifacts
 ```
 
 Executar os pipelines fora do Airflow, mantendo a mesma logica importada pelas

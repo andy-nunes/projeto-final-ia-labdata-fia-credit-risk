@@ -40,7 +40,8 @@ Bibliotecas:
 Quando executada, a DAG:
 
 1. Chama `replace_kaggle_raw_files()` em `scripts/kaggle_to_minio.py`.
-2. Cria os buckets `raw`, `clean` e `abt` caso eles ainda nao existam.
+2. Cria os buckets `raw`, `clean`, `abt` e `artifacts` caso eles ainda nao
+   existam.
 3. Baixa a competicao `home-credit-default-risk` para um diretorio temporario.
 4. Localiza os 10 CSVs esperados no conteudo baixado.
 5. Envia os 10 CSVs para o bucket `raw`.

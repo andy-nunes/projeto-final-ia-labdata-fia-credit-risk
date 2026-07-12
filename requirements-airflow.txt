@@ -2,3 +2,7 @@ kagglehub
 boto3
 pytest
 pytest-mock
+s3fs
+lightgbm
+scikit-learn==1.7.2
+pyyaml

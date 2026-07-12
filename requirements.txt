@@ -1,7 +1,8 @@
 kagglehub
 numpy
 pandas
-scikit-learn
+scikit-learn==1.7.2
+lightgbm
 matplotlib
 seaborn
 jupyterlab
@@ -11,3 +12,8 @@ streamlit
 boto3
 pytest
 pytest-mock
+s3fs
+pyyaml
+fastapi
+uvicorn[standard]
+streamlit

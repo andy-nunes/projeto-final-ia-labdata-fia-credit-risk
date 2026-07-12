@@ -11,7 +11,7 @@ from botocore.exceptions import BotoCoreError, ClientError, EndpointConnectionEr
 MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
-PROJECT_BUCKETS = ("raw", "clean", "abt")
+PROJECT_BUCKETS = ("raw", "clean", "abt", "artifacts")
 
 
 def get_minio_client():

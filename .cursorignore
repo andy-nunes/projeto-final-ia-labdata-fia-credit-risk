@@ -1,0 +1,14 @@
+# Arquivos de Dados
+*.parquet
+*.csv
+*.json
+
+# Modelos e Binários
+*.joblib
+*.pkl
+
+# Ambientes e Caches
+venv/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
