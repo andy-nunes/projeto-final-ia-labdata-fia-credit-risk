@@ -8,10 +8,10 @@ import yaml
 from scripts.model_config import (
     ModelConfig,
     load_model_config,
-    test_performance_from_metadata,
+    performance_from_metadata,
     write_metadata,
 )
-from scripts.abt_to_model_lightgbm import split_abt_three_way, split_features_target
+from scripts.train import split_abt_three_way, split_features_target
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_write_metadata_creates_json(tmp_path: Path) -> None:
     assert payload["threshold"] == 0.25
 
 
-def test_test_performance_from_metadata_uses_stored_confusion_cells() -> None:
+def test_performance_from_metadata_uses_stored_confusion_cells() -> None:
     metadata = {
         "splits": {"rows": {"test": 1000}},
         "business": {"threshold": 0.08},
@@ -103,7 +103,7 @@ def test_test_performance_from_metadata_uses_stored_confusion_cells() -> None:
             "threshold": 0.08,
         },
     }
-    perf = test_performance_from_metadata(metadata)
+    perf = performance_from_metadata(metadata)
     assert perf["tn"] == 700
     assert perf["fp"] == 200
     assert perf["fn"] == 30
@@ -114,7 +114,7 @@ def test_test_performance_from_metadata_uses_stored_confusion_cells() -> None:
     assert abs(perf["precision"] - 0.25925925925925924) < 1e-9
 
 
-def test_test_performance_from_metadata_derives_tn_tp_from_legacy_metrics() -> None:
+def test_performance_from_metadata_derives_tn_tp_from_legacy_metrics() -> None:
     metadata = {
         "splits": {"rows": {"test": 61195}},
         "business": {"threshold": 0.08},
@@ -126,7 +126,7 @@ def test_test_performance_from_metadata_derives_tn_tp_from_legacy_metrics() -> N
             "threshold": 0.08,
         },
     }
-    perf = test_performance_from_metadata(metadata)
+    perf = performance_from_metadata(metadata)
     assert perf["fn"] == 1492
     assert perf["fp"] == 15816
     assert perf["tp"] == 3448

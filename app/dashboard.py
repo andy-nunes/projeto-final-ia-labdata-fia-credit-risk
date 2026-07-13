@@ -24,7 +24,7 @@ from app.abt_catalog import COLUMN_BUSINESS_NAMES, render_catalog
 from scripts.model_config import (
     get_model_config,
     load_model_metadata,
-    test_performance_from_metadata,
+    performance_from_metadata,
 )
 
 _CONFIG = get_model_config()
@@ -1150,7 +1150,7 @@ def _get_model_test_performance(*, force: bool = False) -> dict[str, Any] | None
         return None
     try:
         # Preferir arquivo local do container; evita fallback S3 no caminho da UI.
-        perf = test_performance_from_metadata(load_model_metadata())
+        perf = performance_from_metadata(load_model_metadata())
     except Exception as exc:  # noqa: BLE001 — UI mostra o erro
         st.session_state.pop("model_test_performance", None)
         st.session_state.model_test_performance_error = str(exc)

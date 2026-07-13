@@ -11,7 +11,7 @@ publicando no bucket `clean` somente Parquets aprovados.
 - Schedule: manual (`schedule=None`)
 - Catchup: desabilitado
 - Concorrência: `max_active_tasks=2`
-- Pipeline: `scripts/silver_pipeline.py`
+- Pipeline: `scripts/data_sanitization.py`
 
 ## TaskGroups
 
@@ -47,13 +47,13 @@ docker compose run --rm minio-client ls --recursive local/clean
 Execução direta completa:
 
 ```bash
-docker compose run --rm dev python scripts/silver_pipeline.py
-docker compose run --rm dev python scripts/silver_pipeline.py bureau application_train
+docker compose run --rm dev python scripts/data_sanitization.py
+docker compose run --rm dev python scripts/data_sanitization.py bureau application_train
 ```
 
 ## Testes
 
 ```bash
-docker compose run --rm dev pytest tests/test_silver_transformations.py tests/test_silver_validations.py tests/test_silver_pipeline.py -q
+docker compose run --rm dev pytest tests/test_silver_transformations.py tests/test_silver_validations.py tests/test_data_sanitization.py -q
 docker compose run --rm airflow python -m pytest /opt/airflow/tests/test_silver_dags.py -q
 ```

@@ -22,24 +22,26 @@ melhor, recusar com mais fundamento e proteger a margem da operacao.
 
 A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
 
-- **Analise exploratoria:** o notebook `home_credit_default_risk.ipynb` foi
+- **Analise exploratoria:** o notebook `exp_analysis.ipynb` foi
   usado para conhecer as bases, distribuicoes, nulos e relacoes iniciais entre
   variaveis.
 - **Ingestao:** a DAG `download_kaggle_to_minio` baixa os CSVs do Kaggle e
   publica os dados brutos no bucket `raw` do MinIO.
-- **Camada Silver:** a DAG `raw_to_clean_silver` transforma oito arquivos de
-  negocio em Parquets tratados, com QA antes da escrita no bucket `clean`.
-- **Camada Gold / ABT:** a DAG `clean_to_abt_gold` agrega historicos de bureau,
-  cartao, propostas anteriores, POS/CASH e pagamentos para gerar
-  `abt_train.parquet` no bucket `abt`.
+- **Camada Silver:** `scripts/data_sanitization.py` (DAG `raw_to_clean_silver`)
+  transforma oito arquivos de negocio em Parquets tratados, com QA antes da
+  escrita no bucket `clean`.
+- **Camada Gold / ABT:** `scripts/abt_transform.py` (DAG `clean_to_abt_gold`)
+  agrega historicos de bureau, cartao, propostas anteriores, POS/CASH e
+  pagamentos para gerar `abt_train.parquet` no bucket `abt`.
 - **Modelagem:** a analise comparativa de modelos foi feita no notebook
-  `scripts/abt_to_model_home_credit_test.ipynb`. A partir dessa comparacao, o
-  LightGBM foi escolhido como modelo campeao e seu treino foi consolidado em
-  `scripts/abt_to_model_lightgbm.ipynb`, usando `config/model_config.yaml` para
-  features, splits, metricas e threshold.
-- **Serving:** a FastAPI carrega ABT, modelo e configuracao para expor consulta
-  de cliente e escoragem; o Streamlit consome a API e permite simulacoes
-  What-If com explicabilidade local.
+  `scripts/evaluation.ipynb`. A partir dessa comparacao, o LightGBM foi
+  escolhido como modelo campeao e seu treino foi consolidado em
+  `scripts/train.py` / `scripts/train.ipynb`, usando `config/model_config.yaml`
+  para features, splits, metricas e threshold.
+- **Orquestracao:** as DAGs Airflow encadeiam a esteira; o equivalente CLI e
+  `scripts/pipeline_orchestration.py`.
+- **Serving:** `scripts/predict.py` alimenta a FastAPI e o Streamlit com
+  consulta de cliente, escoragem e simulacoes What-If com explicabilidade local.
 
 As metricas de negocio incluem PR-AUC, F2-Score, recall da classe inadimplente,
 falsos negativos, falsos positivos e taxa de reprovacao no threshold
@@ -184,12 +186,24 @@ Acesse `http://localhost:8501`. O dashboard consome a API internamente via
 
 ## Proximos Passos De Desenvolvimento
 
-- Testar novos thresholds de aprovacao e comparar o impacto em falsos
-  negativos, falsos positivos e taxa de reprovacao.
-- Avaliar oportunidades de melhoria nas features e na regua de decisao a partir
-  da analise dos casos de acerto e erro.
-- Aprofundar a interpretacao dos principais fatores que influenciam a predicao
-  para facilitar a leitura pela mesa de credito.
+Os itens **iii** (monitoramento em producao) e **iv** (acoes automatizadas e
+agentes de IA) do enunciado individual estao documentados como proposta
+teorica em
+[`docs/mlops-monitoramento-e-automacao.md`](docs/mlops-monitoramento-e-automacao.md).
+
+Resumo:
+
+- **Monitoramento:** saude da API e das DAGs, drift e qualidade dos dados,
+  acompanhamento de PR-AUC / F2 / FN-FP e do `business_threshold` contra a
+  linha de base em `model_metadata.json`, com runbook de resposta.
+- **Automacao e agentes:** triagem da fila de credito, dossie assistido para
+  a mesa, alertas de concentracao de risco, ciclo de retreino com aprovacao
+  humana e pareceres de explicabilidade a partir do `/score` — sempre com
+  humano no loop.
+
+Demais evolucoes de modelagem (threshold, features, interpretabilidade) seguem
+subordinadas a essa governanca operacional.
+
 
 ## Documentacao
 
@@ -204,6 +218,8 @@ Detalhes operacionais e tecnicos ficam em `docs/`:
 - `docs/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
 - `docs/minio-client.md`: inspecao e copia de objetos no MinIO.
 - `docs/model-config.md`: guia do `config/model_config.yaml`.
+- `docs/mlops-monitoramento-e-automacao.md`: proposta de monitoramento (iii) e
+  de automacao / agentes de IA (iv).
 
 ## Validacao Basica
 

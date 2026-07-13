@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 import pytest
 
-from scripts.silver_pipeline import (
+from scripts.data_sanitization import (
     collect_and_process,
     main,
     run_table_pipeline,
@@ -149,7 +149,7 @@ def test_run_table_pipeline_executes_full_sequence(tmp_path: Path) -> None:
 
 def test_main_continues_tables_and_returns_one_on_failure(mocker, capsys) -> None:
     """Relata falhas da CLI sem impedir o processamento das tabelas seguintes."""
-    mocked = mocker.patch("scripts.silver_pipeline.run_table_pipeline")
+    mocked = mocker.patch("scripts.data_sanitization.run_table_pipeline")
     mocked.side_effect = [RuntimeError("falha controlada"), {"status": "uploaded"}]
 
     exit_code = main(["bureau", "bureau_balance"])

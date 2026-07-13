@@ -49,6 +49,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./scripts:/opt/airflow/scripts
+      - ./app:/opt/airflow/app:ro
       - ./tests:/opt/airflow/tests:ro
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins

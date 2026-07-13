@@ -1,4 +1,4 @@
-"""Orquestra staging, validação e publicação da camada Gold."""
+"""Transformação clean → ABT de modelagem (abt_transform)."""
 
 from __future__ import annotations
 

@@ -7,7 +7,7 @@ para o resultado bater com `artifacts/model_metadata.json`.
 import pandas as pd
 from sklearn.metrics import confusion_matrix
 
-from scripts.abt_to_model_lightgbm import compute_metrics, split_abt_three_way
+from scripts.train import compute_metrics, split_abt_three_way
 from scripts.model_config import get_model_config
 from scripts.predict import (
     build_prediction_matrix,

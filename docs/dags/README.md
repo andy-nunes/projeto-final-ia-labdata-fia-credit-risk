@@ -84,8 +84,9 @@ Executar os pipelines fora do Airflow, mantendo a mesma logica importada pelas
 DAGs:
 
 ```bash
-docker compose run --rm dev python scripts/silver_pipeline.py
-docker compose run --rm dev python scripts/gold_pipeline.py
+docker compose run --rm dev python scripts/data_sanitization.py
+docker compose run --rm dev python scripts/abt_transform.py
+docker compose run --rm dev python scripts/pipeline_orchestration.py --skip-ingest
 ```
 
 Validar a suite e o carregamento das DAGs:

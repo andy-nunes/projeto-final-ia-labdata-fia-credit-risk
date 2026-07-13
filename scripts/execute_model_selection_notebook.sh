@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-NOTEBOOK="scripts/abt_to_model_home_credit_test.ipynb"
+NOTEBOOK="scripts/evaluation.ipynb"
 
 if ! command -v docker >/dev/null 2>&1; then
   DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
@@ -24,10 +24,10 @@ $COMPOSE run --rm dev bash -lc "
   pip install -q jupyter nbconvert ipykernel lightgbm xgboost &&
   jupyter nbconvert --to notebook --execute \
     --ExecutePreprocessor.timeout=7200 \
-    --output /tmp/abt_to_model_home_credit_test.executed.ipynb \
+    --output /tmp/evaluation.executed.ipynb \
     /app/$NOTEBOOK &&
   cp /app/$NOTEBOOK /app/${NOTEBOOK}.bak &&
-  mv /tmp/abt_to_model_home_credit_test.executed.ipynb /app/$NOTEBOOK
+  mv /tmp/evaluation.executed.ipynb /app/$NOTEBOOK
 "
 
 echo "==> Notebook atualizado com outputs em $NOTEBOOK"

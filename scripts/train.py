@@ -1,4 +1,4 @@
-"""Treina LightGBM a partir da ABT usando config/model_config.yaml."""
+"""Treinamento do modelo LightGBM (train) a partir da ABT e model_config.yaml."""
 
 from __future__ import annotations
 

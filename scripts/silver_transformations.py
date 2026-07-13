@@ -425,7 +425,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     """Delega a CLI legada ao pipeline completo com validação obrigatória."""
-    from scripts.silver_pipeline import main as pipeline_main
+    from scripts.data_sanitization import main as pipeline_main
 
     return pipeline_main(argv)
 

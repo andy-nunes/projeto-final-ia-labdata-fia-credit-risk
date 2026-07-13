@@ -5,7 +5,7 @@ from datetime import datetime
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, get_current_context, task, task_group
 
-from scripts.silver_pipeline import (
+from scripts.data_sanitization import (
     collect_and_process,
     validate_staged,
     write_clean,

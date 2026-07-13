@@ -12,7 +12,7 @@ preservado.
 - Schedule: manual (`schedule=None`)
 - Catchup: desabilitado
 - Execuções simultâneas: `max_active_runs=1`
-- Pipeline importado: `scripts/gold_pipeline.py`
+- Pipeline importado: `scripts/abt_transform.py`
 - Saída exclusiva no MinIO: `abt/abt_train.parquet`
 
 ## Sequência
@@ -74,7 +74,7 @@ uma `GoldValidationError`. O QA final exige 307.511 linhas, chave única,
 
 ```bash
 docker compose exec -T airflow airflow dags trigger 03_gold_abt_features
-docker compose run --rm dev python scripts/gold_pipeline.py
+docker compose run --rm dev python scripts/abt_transform.py
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```
 

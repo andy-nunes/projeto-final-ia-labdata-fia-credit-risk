@@ -13,6 +13,8 @@ CATALOG_MODULE_PATH = (
 if not DASHBOARD_PATH.exists():
     pytest.skip("O container atual nao monta app/dashboard.py.", allow_module_level=True)
 
+pytest.importorskip("streamlit")
+
 from streamlit.testing.v1 import AppTest
 
 from app import dashboard
@@ -342,7 +344,7 @@ def test_dashboard_catalog_navigation_does_not_use_page_link_registry() -> None:
     assert "PR-AUC:" in source
     assert "_format_decimal_br" in source
     assert "_render_confusion_matrix" in source
-    assert "test_performance_from_metadata" in source
+    assert "performance_from_metadata" in source
     assert "load_model_metadata" in source
     assert "### Storytelling de Risco e Defesa do Modelo" not in source
     assert "### Mapeamento de Risco por Segmento (Variáveis Editáveis)" in source

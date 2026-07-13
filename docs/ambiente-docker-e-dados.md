@@ -493,7 +493,7 @@ Resultado relevante:
 A DAG manual `02_silver_clean_data` lê oito CSVs do bucket `raw` e cria oito
 TaskGroups independentes. Cada grupo coleta e processa no staging, valida com as
 regras de `HMDR_Camada_Silver.ipynb` e só então publica no bucket `clean`.
-O fluxo operacional fica em `scripts/silver_pipeline.py`; regras puras ficam em
+O fluxo operacional fica em `scripts/data_sanitization.py`; regras puras ficam em
 `scripts/silver_transformations.py` e `scripts/silver_validations.py`.
 O processamento de `bureau_balance` usa chunks e escrita incremental Parquet
 para não carregar seus 27,3 milhões de linhas simultaneamente na memória.
@@ -508,7 +508,7 @@ semantica de falhas, execucao pela CLI e testes pytest.
 ```bash
 docker compose exec -T airflow airflow dags trigger 02_silver_clean_data
 docker compose run --rm minio-client ls --recursive local/clean
-docker compose run --rm dev python scripts/silver_pipeline.py bureau
+docker compose run --rm dev python scripts/data_sanitization.py bureau
 ```
 
 ## Camada Gold (ABT)
@@ -526,7 +526,7 @@ execução. A validação final exige exatamente 307.511 clientes e preservaçã
 
 ```bash
 docker compose exec -T airflow airflow dags trigger 03_gold_abt_features
-docker compose run --rm dev python scripts/gold_pipeline.py
+docker compose run --rm dev python scripts/abt_transform.py
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```
 

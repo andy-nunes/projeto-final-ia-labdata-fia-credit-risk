@@ -257,7 +257,7 @@ def load_model_metadata(
     )
 
 
-def test_performance_from_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+def performance_from_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     """Extrai matriz de confusão e KPIs do split de teste a partir do metadata."""
     metrics = dict(metadata.get("metrics_test") or {})
     if not metrics:

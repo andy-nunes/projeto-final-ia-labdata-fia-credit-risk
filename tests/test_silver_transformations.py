@@ -233,7 +233,7 @@ def test_transform_table_downloads_and_uploads() -> None:
 
 def test_legacy_transformations_cli_delegates_to_complete_pipeline(mocker) -> None:
     """Impede que a CLI antiga publique dados sem executar o QA."""
-    mocked_pipeline = mocker.patch("scripts.silver_pipeline.main", return_value=0)
+    mocked_pipeline = mocker.patch("scripts.data_sanitization.main", return_value=0)
     mocker.patch(
         "scripts.silver_transformations.transform_table",
         return_value={"rows": 1, "destination": "clean/test.parquet"},

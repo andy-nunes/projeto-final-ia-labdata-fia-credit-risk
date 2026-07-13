@@ -58,7 +58,7 @@ Concentra:
 As validacoes executam todas as regras aplicaveis antes de levantar a excecao.
 Assim, os logs mostram todas as falhas encontradas na mesma etapa.
 
-### `scripts/gold_pipeline.py`
+### `scripts/abt_transform.py`
 
 Concentra as fronteiras operacionais:
 
@@ -73,7 +73,7 @@ Concentra as fronteiras operacionais:
 Este e o unico modulo importado pela DAG. A execucao direta usa:
 
 ```bash
-docker compose run --rm dev python scripts/gold_pipeline.py
+docker compose run --rm dev python scripts/abt_transform.py
 ```
 
 ### `dags/clean_to_abt_gold.py`
@@ -228,7 +228,7 @@ A suite permanece em pytest e pytest-mock:
   parcelas fracionadas e merge;
 - `tests/test_gold_validations.py`: schemas, acumulacao de falhas, logs, regras
   informativas e volumetria exata;
-- `tests/test_gold_pipeline.py`: MinIO simulado, staging, metadados de XCom,
+- `tests/test_abt_transform.py`: MinIO simulado, staging, metadados de XCom,
   bloqueio de upload, overwrite, preservacao e limpeza;
 - `tests/test_gold_dag.py`: configuracao manual, sete TaskGroups, tasks e
   dependencias sequenciais.
@@ -240,7 +240,7 @@ docker compose exec -T airflow python -m pytest /opt/airflow/tests -q
 docker compose exec -T airflow python -m py_compile \
   /opt/airflow/scripts/gold_transformations.py \
   /opt/airflow/scripts/gold_validations.py \
-  /opt/airflow/scripts/gold_pipeline.py \
+  /opt/airflow/scripts/abt_transform.py \
   /opt/airflow/dags/clean_to_abt_gold.py
 docker compose exec -T airflow airflow dags list-import-errors
 docker compose exec -T airflow airflow dags list

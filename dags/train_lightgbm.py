@@ -4,7 +4,7 @@ from datetime import datetime
 
 from airflow.sdk import dag, task
 
-from scripts.abt_to_model_lightgbm import run_training
+from scripts.train import run_training
 
 
 @dag(

@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from scripts.gold_pipeline import (
+from scripts.abt_transform import (
     main,
     process_application,
     stage_path,
@@ -110,7 +110,7 @@ def test_write_abt_requires_qa_uploads_final_and_cleans_run(tmp_path: Path) -> N
 def test_main_reports_failure_and_returns_one(mocker, capsys) -> None:
     """Converte falha sequencial em código de saída para o shell."""
     mocker.patch(
-        "scripts.gold_pipeline.run_gold_pipeline",
+        "scripts.abt_transform.run_gold_pipeline",
         side_effect=RuntimeError("falha controlada"),
     )
 

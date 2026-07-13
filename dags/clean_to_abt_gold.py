@@ -5,7 +5,7 @@ from datetime import datetime
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, get_current_context, task, task_group
 
-from scripts.gold_pipeline import (
+from scripts.abt_transform import (
     build_abt_stage,
     process_application,
     process_bureau,

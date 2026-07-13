@@ -13,7 +13,7 @@ modelo no MinIO.
 - `max_active_runs`: `1`
 - Tags: `credit-risk`, `model`, `lightgbm`, `training`
 - Arquivo: `dags/train_lightgbm.py`
-- Script importado: `scripts/abt_to_model_lightgbm.py`
+- Script importado: `scripts/train.py`
 
 ## Dependencias
 
@@ -59,7 +59,7 @@ deserializacao em runtime.
 
 Quando executada, a DAG:
 
-1. Chama `run_training()` em `scripts/abt_to_model_lightgbm.py`.
+1. Chama `run_training()` em `scripts/train.py`.
 2. Le a ABT final do bucket `abt`.
 3. Separa a base em treino, teste e holdout de demonstracao, mantendo
    estratificacao por `TARGET`.
