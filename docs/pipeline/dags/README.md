@@ -6,9 +6,9 @@ Bronze → Silver → Gold → Model via `TriggerDagRunOperator`; basta despausa
 as quatro DAGs e disparar `01_bronze_ingest_kaggle`.
 
 A arquitetura, a semantica de QA, o staging e a execucao direta da camada
-Silver estao detalhados em [`docs/camada-silver.md`](../camada-silver.md).
+Silver estao detalhados em [`docs/pipeline/camada-silver.md`](../camada-silver.md).
 O desenho e o contrato operacional da camada Gold estao em
-[`docs/camada-gold-abt-design.md`](../camada-gold-abt-design.md).
+[`docs/pipeline/camada-gold-abt-design.md`](../camada-gold-abt-design.md).
 
 As DAGs devem conter apenas a orquestracao. O codigo executavel usado pelo
 projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.

@@ -362,7 +362,7 @@ client-side em um componente HTML/JavaScript, nao como widgets Streamlit como
 `text_input`, `selectbox`, `multiselect`, `download_button` ou `dataframe`,
 porque widgets interativos causaram crashes nativos `Exited (139)` no runtime
 do Streamlit ao rerenderizar a pagina. A documentacao especifica fica em
-`docs/catalogo-abt.md`.
+`docs/operations/catalogo-abt.md`.
 
 Os campos editaveis sao definidos em `config/model_config.yaml`. Atualmente o
 dashboard permite simular `AMT_CREDIT`, `AMT_ANNUITY`, `NAME_EDUCATION_TYPE`,
@@ -501,7 +501,7 @@ Os logs de QA usam `[PASS]`, `[WARNING]` e `[FAIL]`. Warnings seguem a lógica d
 notebook e não reprovam tasks. Falhas preservam o Parquet intermediário; uploads
 bem-sucedidos removem o staging da tabela.
 
-Consulte [`docs/camada-silver.md`](camada-silver.md) para a arquitetura completa,
+Consulte [`docs/pipeline/camada-silver.md`](../pipeline/camada-silver.md) para a arquitetura completa,
 semantica de falhas, execucao pela CLI e testes pytest.
 
 ```bash
@@ -529,7 +529,7 @@ docker compose run --rm dev python scripts/abt_transform.py
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```
 
-Consulte [`docs/dags/03_gold_abt_features.md`](dags/03_gold_abt_features.md) para o
+Consulte [`docs/pipeline/dags/03_gold_abt_features.md`](../pipeline/dags/03_gold_abt_features.md) para o
 grafo, entradas, QA e comportamento operacional.
 
 Ainda nao foram implementados:

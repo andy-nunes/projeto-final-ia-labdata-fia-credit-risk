@@ -249,8 +249,8 @@ docker compose exec -T airflow airflow dags list
 ## Documentacao e manutencao
 
 A implementacao esta documentada em `README.md`,
-`docs/ambiente-docker-e-dados.md`, `docs/dags/README.md` e
-`docs/dags/03_gold_abt_features.md`. Os arquivos locais ignorados `AGENTS.md` e
+`docs/architecture/ambiente-docker-e-dados.md`, `docs/pipeline/dags/README.md` e
+`docs/pipeline/dags/03_gold_abt_features.md`. Os arquivos locais ignorados `AGENTS.md` e
 `SKILL.md` devem permanecer sincronizados com este contrato.
 
 Todo codigo Python novo, inclusive modulos de teste, fixtures, classes fake,

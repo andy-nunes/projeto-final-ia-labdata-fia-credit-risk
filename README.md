@@ -51,14 +51,14 @@ operacional.
 
 <p align="center">
   <img
-    src="docs/arquitetura-mlops-home-credit.png"
+    src="docs/architecture/arquitetura-mlops-home-credit.png"
     alt="Arquitetura MLOps do motor de decisao de credito"
     width="900"
   />
 </p>
 
-Arquivos da arquitetura: [`PNG`](docs/arquitetura-mlops-home-credit.png) e
-[`SVG`](docs/arquitetura-mlops-home-credit.svg).
+Arquivos da arquitetura: [`PNG`](docs/architecture/arquitetura-mlops-home-credit.png) e
+[`SVG`](docs/architecture/arquitetura-mlops-home-credit.svg).
 
 Componentes principais:
 
@@ -189,7 +189,7 @@ Acesse `http://localhost:8501`. O dashboard consome a API internamente via
 Os itens **iii** (monitoramento em producao) e **iv** (acoes automatizadas e
 agentes de IA) do enunciado individual estao documentados como proposta
 teorica em
-[`docs/mlops-monitoramento-e-automacao.md`](docs/mlops-monitoramento-e-automacao.md).
+[`docs/architecture/mlops-monitoramento-e-automacao.md`](docs/architecture/mlops-monitoramento-e-automacao.md).
 
 Resumo:
 
@@ -207,18 +207,18 @@ subordinadas a essa governanca operacional.
 
 ## Documentacao
 
-Detalhes operacionais e tecnicos ficam em `docs/`:
+Detalhes operacionais e tecnicos ficam em [`docs/README.md`](docs/README.md):
 
-- `docs/ambiente-docker-e-dados.md`: ambiente Docker, servicos e volumes.
-- `docs/camada-silver.md`: transformacoes, staging e QA de `raw` para `clean`.
-- `docs/camada-gold-abt-design.md`: transformacoes, staging e QA de `clean`
+- `docs/architecture/ambiente-docker-e-dados.md`: ambiente Docker, servicos e volumes.
+- `docs/pipeline/camada-silver.md`: transformacoes, staging e QA de `raw` para `clean`.
+- `docs/pipeline/camada-gold-abt-design.md`: transformacoes, staging e QA de `clean`
   para `abt`.
-- `docs/catalogo-abt.md`: catalogo pesquisavel da ABT no Streamlit.
-- `docs/dags/README.md`: indice e comandos das DAGs manuais.
-- `docs/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
-- `docs/minio-client.md`: inspecao e copia de objetos no MinIO.
-- `docs/model-config.md`: guia do `config/model_config.yaml`.
-- `docs/mlops-monitoramento-e-automacao.md`: proposta de monitoramento (iii) e
+- `docs/operations/catalogo-abt.md`: catalogo pesquisavel da ABT no Streamlit.
+- `docs/pipeline/dags/README.md`: indice e comandos das DAGs manuais.
+- `docs/modeling/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
+- `docs/operations/minio-client.md`: inspecao e copia de objetos no MinIO.
+- `docs/modeling/model-config.md`: guia do `config/model_config.yaml`.
+- `docs/architecture/mlops-monitoramento-e-automacao.md`: proposta de monitoramento (iii) e
   de automacao / agentes de IA (iv).
 
 ## Validacao Basica
