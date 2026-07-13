@@ -18,6 +18,7 @@ from app.ui.formatting import (
     _format_risk_pct,
     _get_label,
 )
+from app.ui.session import _set_panel_flag
 from scripts.model_config import (
     get_model_config,
     load_model_metadata,
@@ -311,140 +312,147 @@ def _render_performance_tab() -> None:
         unsafe_allow_html=True,
     )
 
-    perf = _get_model_test_performance()
+    if st.session_state.get("performance_metrics_ready"):
+        unload_col, _ = st.columns([1, 3])
+        with unload_col:
+            if st.button(
+                "Ocultar métricas oficiais",
+                key="btn_unload_model_metrics",
+                use_container_width=True,
+            ):
+                _set_panel_flag("performance_metrics_ready", False)
 
-    if perf is None and st.session_state.get("model_test_performance_error"):
-        st.error(
-            "Não foi possível carregar as métricas oficiais do modelo "
-            f"(`artifacts/model_metadata.json`): "
-            f"{st.session_state.model_test_performance_error}"
-        )
+        perf = _get_model_test_performance()
+
+        if perf is None and st.session_state.get("model_test_performance_error"):
+            st.error(
+                "Não foi possível carregar as métricas oficiais do modelo "
+                f"(`artifacts/model_metadata.json`): "
+                f"{st.session_state.model_test_performance_error}"
+            )
+            if st.button(
+                "Tentar novamente",
+                key="btn_retry_model_metrics",
+                type="secondary",
+            ):
+                st.session_state.pop("model_test_performance", None)
+                st.session_state.pop("model_test_performance_error", None)
+                perf = _get_model_test_performance(force=True)
+                if perf is None and st.session_state.get(
+                    "model_test_performance_error"
+                ):
+                    st.error(
+                        "Não foi possível carregar as métricas oficiais do modelo "
+                        f"(`artifacts/model_metadata.json`): "
+                        f"{st.session_state.model_test_performance_error}"
+                    )
+
+        if perf is not None:
+            test_rows_label = _format_int_br(perf["test_rows"])
+            threshold_label = _format_pct_br(perf["threshold"], digits=0)
+            threshold_cm = f"{perf['threshold']:.2f}".replace(".", ",")
+            recall_label = _format_pct_br(perf["recall"])
+            precision_label = _format_pct_br(perf["precision"])
+            roc_auc_label = _format_decimal_br(perf["roc_auc"])
+            pr_auc_label = _format_decimal_br(perf["pr_auc"])
+            f2_label = _format_decimal_br(perf["f2"])
+            reprovacao_label = _format_pct_br(perf["taxa_reprovacao"])
+            f_beta = perf.get("f_beta", 2.0)
+            base_rate_label = _format_pct_br(perf["base_default_rate"])
+            post_rate_label = _format_pct_br(perf["post_model_default_rate"])
+            reduction_label = _format_pct_br(perf["default_reduction"], digits=0)
+            approved_label = _format_int_br(perf["approved"])
+            tp_label = _format_int_br(perf["tp"])
+            defaults_label = _format_int_br(perf["defaults_total"])
+
+            st.caption(
+                "Apresentação executiva com a matriz de confusão oficial no split de teste "
+                f"({test_rows_label} propostas, threshold de {threshold_label}) e risco médio "
+                "dos perfis cadastrais editáveis no What-If."
+            )
+
+            st.markdown("### KPIs Executivos de Saneamento da Carteira")
+            kpi_cards = [
+                _render_stat_card_html(
+                    "Taxa de Calote Base",
+                    base_rate_label,
+                    note="Média natural da carteira sem modelo.",
+                ),
+                _render_stat_card_html(
+                    "Taxa Pós-Modelo",
+                    post_rate_label,
+                    tone="success",
+                    note=(
+                        f"Risco real entre os {approved_label} aprovados — "
+                        f"queda de {reduction_label}."
+                    ),
+                ),
+                _render_stat_card_html(
+                    "Captura de Calotes (Recall)",
+                    recall_label,
+                    tone="success",
+                    note=(
+                        f"{tp_label} de {defaults_label} inadimplentes barrados "
+                        "antes da concessão."
+                    ),
+                ),
+            ]
+            st.markdown(
+                f'<div class="stat-grid">{"".join(kpi_cards)}</div>',
+                unsafe_allow_html=True,
+            )
+
+            st.markdown("### Métricas de Discriminação e Captura")
+            disc_cards = [
+                _render_stat_card_html(
+                    "ROC-AUC:",
+                    roc_auc_label,
+                    note="Área sob a curva ROC — separação geral do modelo.",
+                ),
+                _render_stat_card_html(
+                    "PR-AUC:",
+                    pr_auc_label,
+                    note="Área sob Precision-Recall — métrica primária do treino.",
+                ),
+                _render_stat_card_html(
+                    "Precision",
+                    precision_label,
+                    note="Dos reprovados, quantos eram calotes reais.",
+                ),
+                _render_stat_card_html(
+                    "F2-Score",
+                    f2_label,
+                    note=f"β={f_beta:g} — prioriza recall sobre precision.",
+                ),
+                _render_stat_card_html(
+                    "Reprovação",
+                    reprovacao_label,
+                    note=f"Taxa de reprovação no threshold de {threshold_label}.",
+                ),
+            ]
+            st.markdown(
+                f'<div class="stat-grid stat-grid-5">{"".join(disc_cards)}</div>',
+                unsafe_allow_html=True,
+            )
+
+            _render_confusion_matrix(
+                tn=int(perf["tn"]),
+                fp=int(perf["fp"]),
+                fn=int(perf["fn"]),
+                tp=int(perf["tp"]),
+                threshold_label=threshold_cm,
+                recall_pct=recall_label,
+            )
+    else:
         if st.button(
-            "Tentar novamente",
-            key="btn_retry_model_metrics",
+            "Carregar métricas oficiais",
             type="secondary",
+            key="btn_load_model_metrics",
         ):
-            st.session_state.pop("model_test_performance", None)
-            st.session_state.pop("model_test_performance_error", None)
-            perf = _get_model_test_performance(force=True)
-            if perf is None and st.session_state.get("model_test_performance_error"):
-                st.error(
-                    "Não foi possível carregar as métricas oficiais do modelo "
-                    f"(`artifacts/model_metadata.json`): "
-                    f"{st.session_state.model_test_performance_error}"
-                )
-
-    if perf is not None:
-        test_rows_label = _format_int_br(perf["test_rows"])
-        threshold_label = _format_pct_br(perf["threshold"], digits=0)
-        threshold_cm = f"{perf['threshold']:.2f}".replace(".", ",")
-        recall_label = _format_pct_br(perf["recall"])
-        precision_label = _format_pct_br(perf["precision"])
-        roc_auc_label = _format_decimal_br(perf["roc_auc"])
-        pr_auc_label = _format_decimal_br(perf["pr_auc"])
-        f2_label = _format_decimal_br(perf["f2"])
-        reprovacao_label = _format_pct_br(perf["taxa_reprovacao"])
-        f_beta = perf.get("f_beta", 2.0)
-        base_rate_label = _format_pct_br(perf["base_default_rate"])
-        post_rate_label = _format_pct_br(perf["post_model_default_rate"])
-        reduction_label = _format_pct_br(perf["default_reduction"], digits=0)
-        approved_label = _format_int_br(perf["approved"])
-        tp_label = _format_int_br(perf["tp"])
-        defaults_label = _format_int_br(perf["defaults_total"])
-
-        st.caption(
-            "Apresentação executiva com a matriz de confusão oficial no split de teste "
-            f"({test_rows_label} propostas, threshold de {threshold_label}) e risco médio "
-            "dos perfis cadastrais editáveis no What-If."
-        )
-
-        # ------------------------------------------------------------------
-        # Bloco 1 — KPIs executivos de saneamento da carteira
-        # ------------------------------------------------------------------
-        st.markdown("### KPIs Executivos de Saneamento da Carteira")
-        kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-        with kpi_col1:
-            st.markdown(
-                f"""
-                **Taxa de Calote Base: {base_rate_label}**
-
-                Média natural da carteira sem modelo.
-                """
-            )
-        with kpi_col2:
-            st.markdown(
-                f"""
-                **Taxa Pós-Modelo: {post_rate_label}**
-
-                Risco real entre os {approved_label} clientes aprovados — queda de
-                {reduction_label} na inadimplência.
-                """
-            )
-        with kpi_col3:
-            st.markdown(
-                f"""
-                **Captura de Calotes (Recall): {recall_label}**
-
-                {tp_label} de {defaults_label} inadimplentes barrados antes da concessão.
-                """
-            )
-
-        # ------------------------------------------------------------------
-        # Bloco 1b — Discriminação e área sob as curvas
-        # ------------------------------------------------------------------
-        st.markdown("### Métricas de Discriminação e Captura")
-        disc_col1, disc_col2, disc_col3, disc_col4, disc_col5 = st.columns(5)
-        with disc_col1:
-            st.markdown(
-                f"""
-                **ROC-AUC: {roc_auc_label}**
-
-                Área sob a curva ROC — separação geral do modelo.
-                """
-            )
-        with disc_col2:
-            st.markdown(
-                f"""
-                **PR-AUC: {pr_auc_label}**
-
-                Área sob Precision-Recall — métrica primária do treino.
-                """
-            )
-        with disc_col3:
-            st.markdown(
-                f"""
-                **Precision: {precision_label}**
-
-                Dos reprovados, quantos eram calotes reais.
-                """
-            )
-        with disc_col4:
-            st.markdown(
-                f"""
-                **F2-Score: {f2_label}**
-
-                β={f_beta:g} — prioriza recall sobre precision.
-                """
-            )
-        with disc_col5:
-            st.markdown(
-                f"""
-                **Reprovação: {reprovacao_label}**
-
-                Taxa de reprovação no threshold de {threshold_label}.
-                """
-            )
-
-        # ------------------------------------------------------------------
-        # Bloco 2 — Matriz de confusão visual (estilo executivo)
-        # ------------------------------------------------------------------
-        _render_confusion_matrix(
-            tn=int(perf["tn"]),
-            fp=int(perf["fp"]),
-            fn=int(perf["fn"]),
-            tp=int(perf["tp"]),
-            threshold_label=threshold_cm,
-            recall_pct=recall_label,
+            _set_panel_flag("performance_metrics_ready", True)
+        st.info(
+            "KPIs, discriminação e matriz de confusão ficam sob demanda "
+            "para não pesar a Mesa de Crédito."
         )
 
     # ------------------------------------------------------------------
@@ -457,36 +465,43 @@ def _render_performance_tab() -> None:
         "agregada pelas variáveis categóricas do simulador What-If."
     )
 
-    if not st.session_state.get("holdout_segment_risk_ready"):
-        if st.button(
-            "Carregar mapeamento de risco",
-            type="secondary",
-            key="btn_load_segment_risk",
-        ):
-            st.session_state.holdout_segment_risk_ready = True
-            st.session_state.segment_rankings_cache = None
-        else:
-            st.info(
-                "O mapeamento escora a carteira Holdout uma vez e fica em cache. "
-                "Carregue quando for analisar os segmentos."
+    if st.session_state.get("holdout_segment_risk_ready"):
+        unload_col, _ = st.columns([1, 3])
+        with unload_col:
+            if st.button(
+                "Ocultar mapeamento",
+                key="btn_unload_segment_risk",
+                use_container_width=True,
+            ):
+                _set_panel_flag("holdout_segment_risk_ready", False)
+
+        cached_rankings = st.session_state.get("segment_rankings_cache")
+        if cached_rankings is not None:
+            _render_segment_rankings_cache(cached_rankings)
+            return
+
+        try:
+            scored_holdout = _get_holdout_risk_scores()
+        except Exception as exc:
+            st.error(
+                "Não foi possível calcular o risco da carteira Holdout. "
+                f"Verifique o artefato do modelo e o parquet de demonstração. Detalhe: {exc}"
             )
             return
 
-    cached_rankings = st.session_state.get("segment_rankings_cache")
-    if cached_rankings is not None:
-        _render_segment_rankings_cache(cached_rankings)
+        rankings_cache = _build_segment_rankings_cache(scored_holdout)
+        st.session_state.segment_rankings_cache = rankings_cache
+        _render_segment_rankings_cache(rankings_cache)
         return
 
-    try:
-        scored_holdout = _get_holdout_risk_scores()
-    except Exception as exc:
-        st.error(
-            "Não foi possível calcular o risco da carteira Holdout. "
-            f"Verifique o artefato do modelo e o parquet de demonstração. Detalhe: {exc}"
-        )
-        return
-
-    rankings_cache = _build_segment_rankings_cache(scored_holdout)
-    st.session_state.segment_rankings_cache = rankings_cache
-    _render_segment_rankings_cache(rankings_cache)
+    if st.button(
+        "Carregar mapeamento de risco",
+        type="secondary",
+        key="btn_load_segment_risk",
+    ):
+        _set_panel_flag("holdout_segment_risk_ready", True)
+    st.info(
+        "O mapeamento escora a carteira Holdout uma vez e fica em cache. "
+        "Carregue quando for analisar os segmentos."
+    )
 

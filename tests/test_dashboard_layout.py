@@ -332,20 +332,36 @@ def test_dashboard_catalog_navigation_does_not_use_page_link_registry() -> None:
     assert "render_catalog(show_back_link=True)" in source
     assert "catalog_ready" in source
     assert 'key="btn_load_catalog"' in source
+    assert 'key="btn_unload_catalog"' in source
     assert "dossier_table_ready" in source
     assert 'key="btn_load_dossier_table"' in source
+    assert 'key="btn_unload_dossier_table"' in source
+    assert "dossier_table_cache" in source
+    assert "_get_dossier_table" in source
     assert "score_json_ready" in source
     assert 'key="btn_show_score_json"' in source
     assert "segment_rankings_cache" in source
     assert "_get_holdout_risk_scores" in source
     assert "_local_file_fingerprint" in source
     assert 'key="btn_retry_model_metrics"' in source
-    assert "st.rerun()" not in source
+    assert "performance_metrics_ready" in source
+    assert 'key="btn_load_model_metrics"' in source
+    assert 'key="btn_unload_model_metrics"' in source
+    assert "st.rerun()" not in source.split("def _set_panel_flag")[0]
+    assert "def _set_panel_flag" in source
+    assert source.count("st.rerun()") == 1
     assert "Catálogo em manutenção para otimização de performance." not in source
     assert '@st.cache_data(show_spinner=False)' in source
     assert source.count("@st.cache_data(show_spinner=False)") == 1
     assert "holdout_segment_risk_ready" in source
     assert 'key="btn_load_segment_risk"' in source
+    assert 'key="btn_unload_segment_risk"' in source
+    assert "@st.cache_data" in (
+        Path(__file__).resolve().parents[1] / "app" / "abt_catalog.py"
+    ).read_text(encoding="utf-8")
+    assert "def _build_catalog_markdown_blocks" in (
+        Path(__file__).resolve().parents[1] / "app" / "abt_catalog.py"
+    ).read_text(encoding="utf-8")
     assert "_get_model_test_performance" in source
     assert '@st.cache_data(show_spinner="Carregando métricas oficiais do modelo...")' not in source
     assert '@st.cache_data(show_spinner="Calculando risco da carteira Holdout...")' not in source

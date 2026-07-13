@@ -120,6 +120,9 @@ _PAGE_STYLE = """
         gap: 0.75rem;
         margin: 0.3rem 0 0.55rem 0;
     }
+    .stat-grid-5 {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
     .stat-card {
         background: #ffffff;
         border: 1px solid #e2e8f0;
@@ -239,6 +242,9 @@ _PAGE_STYLE = """
         .stat-grid {
             grid-template-columns: 1fr;
         }
+        .stat-grid-5 {
+            grid-template-columns: 1fr;
+        }
         .factor-row {
             grid-template-columns: 1fr;
             gap: 0.45rem;
@@ -246,6 +252,29 @@ _PAGE_STYLE = """
         .factor-value {
             text-align: left;
         }
+    }
+    @media (min-width: 761px) and (max-width: 1100px) {
+        .stat-grid-5 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+    button[data-baseweb="tab"] {
+        font-weight: 650;
+        letter-spacing: 0.01em;
+    }
+    div[data-testid="stTabs"] [role="tablist"] {
+        gap: 0.35rem;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 0.35rem;
+    }
+    div[data-testid="stForm"] {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.85rem 1rem 1rem 1rem;
+        background: #ffffff;
+    }
+    div[data-testid="stForm"] [data-testid="stVerticalBlock"] {
+        gap: 0.55rem;
     }
     .cm-wrap {
         margin: 0.75rem 0 1.1rem 0;

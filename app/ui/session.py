@@ -34,6 +34,10 @@ def _init_session_state() -> None:
         st.session_state.score_json_ready = False
     if "segment_rankings_cache" not in st.session_state:
         st.session_state.segment_rankings_cache = None
+    if "dossier_table_cache" not in st.session_state:
+        st.session_state.dossier_table_cache = None
+    if "performance_metrics_ready" not in st.session_state:
+        st.session_state.performance_metrics_ready = False
 
 def _clear_edit_widget_keys(client_id: int | None = None) -> None:
     """Remove valores de widgets What-If para evitar reaproveitar estado antigo."""
@@ -46,15 +50,27 @@ def _clear_client_view_flags() -> None:
     """Reseta painéis pesados do dossiê/JSON ao trocar ou limpar cliente."""
     st.session_state.dossier_table_ready = False
     st.session_state.score_json_ready = False
+    st.session_state.dossier_table_cache = None
+
+def _set_panel_flag(flag_key: str, value: bool, **extra: Any) -> None:
+    """Atualiza flag de painel e reroda a tela para não misturar Carregar/Ocultar."""
+    st.session_state[flag_key] = value
+    for key, extra_value in extra.items():
+        st.session_state[key] = extra_value
+    st.rerun()
 
 def _clear_dashboard_state() -> None:
-    """Limpa dossie, score e restaura o identificador padrao da tela."""
+    """Limpa dossiê, score e desmonta painéis pesados das outras abas."""
     _clear_edit_widget_keys(st.session_state.get("client_id"))
     st.session_state.client_features = None
     st.session_state.client_id = None
     st.session_state.score_result = None
     st.session_state.sk_id_input = "139767"
     _clear_client_view_flags()
+    # Evita remount de painéis pesados nos próximos reruns da mesa.
+    st.session_state.catalog_ready = False
+    st.session_state.holdout_segment_risk_ready = False
+    st.session_state.performance_metrics_ready = False
 
 def _seed_edit_widgets_from_features(features: dict[str, Any], client_id: int) -> None:
     """Inicializa chaves dos widgets What-If fora do form (obrigatório no Streamlit)."""

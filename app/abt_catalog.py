@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import lru_cache
 from html import escape
 import json
 from pathlib import Path
@@ -12,6 +11,7 @@ from typing import Any
 
 import pandas as pd
 import pyarrow.parquet as pq
+import streamlit as st
 
 from scripts.model_config import get_model_config
 
@@ -1026,7 +1026,7 @@ def format_variable_entry(
     return f"**{column_name}** *({type_token})*\n* {desc}"
 
 
-@lru_cache(maxsize=1)
+@st.cache_data
 def _build_catalog_markdown_blocks() -> tuple[str, str]:
     """Monta e memoiza os blocos markdown do dicionário (highlight + demais)."""
     catalog = build_catalog_frame()
@@ -1068,8 +1068,6 @@ def render_catalog(*, show_back_link: bool = False) -> None:
     Lista contínua em Markdown puro: destaque de identificador/alvo e demais
     variáveis em fluxo único, sem tabelas, filtros ou blocos por categoria.
     """
-    import streamlit as st
-
     st.markdown(
         """
         <style>

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import math
 from typing import Any
 
@@ -16,7 +15,6 @@ from app.ui.components import (
     _build_score_stat_cards,
     _render_factor_row_html,
     _render_override_item_html,
-    _render_stat_card_html,
 )
 from app.ui.constants import (
     COMPLIANCE_404_MSG,
@@ -28,7 +26,7 @@ from app.ui.constants import (
     _CONFIG,
 )
 from app.ui.features import _render_editable_feature, _render_readonly_feature
-from app.ui.formatting import _get_label, _is_approved
+from app.ui.formatting import _is_approved
 from app.ui.session import (
     _clear_client_view_flags,
     _clear_dashboard_state,
@@ -36,7 +34,43 @@ from app.ui.session import (
     _collect_overrides_from_session,
     _ensure_edit_widget_seeds,
     _seed_edit_widgets_from_features,
+    _set_panel_flag,
 )
+
+_DOSSIER_TABLE_COLUMNS = ("Campo", "Variável", "Valor")
+_DOSSIER_TABLE_CACHE_VERSION = 2
+
+def _get_dossier_table(features: dict[str, Any], client_id: int) -> pd.DataFrame:
+    """Reusa o DataFrame do dossiê completo quando o cliente não mudou."""
+    from app.ui.formatting import _format_readonly_value as format_readonly
+
+    cached = st.session_state.get("dossier_table_cache")
+    if (
+        isinstance(cached, dict)
+        and cached.get("version") == _DOSSIER_TABLE_CACHE_VERSION
+        and cached.get("client_id") == client_id
+        and isinstance(cached.get("frame"), pd.DataFrame)
+        and tuple(cached["frame"].columns) == _DOSSIER_TABLE_COLUMNS
+    ):
+        return cached["frame"]
+
+    frame = pd.DataFrame(
+        [
+            [
+                col_name,
+                FEATURE_TRANSLATIONS.get(col_name, col_name),
+                format_readonly(col_name, value),
+            ]
+            for col_name, value in features.items()
+        ],
+        columns=list(_DOSSIER_TABLE_COLUMNS),
+    )
+    st.session_state.dossier_table_cache = {
+        "version": _DOSSIER_TABLE_CACHE_VERSION,
+        "client_id": client_id,
+        "frame": frame,
+    }
+    return frame
 
 def _load_client_dossier(client_id_query: int) -> None:
     """Consulta API e persiste dossiê + seeds dos widgets What-If."""
@@ -173,14 +207,13 @@ def _render_score_result(
     with st.expander("Output - JSON"):
         if st.session_state.get("score_json_ready"):
             st.json(result)
-        elif st.button(
-            "Mostrar JSON da escoragem",
-            key="btn_show_score_json",
-            use_container_width=True,
-        ):
-            st.session_state.score_json_ready = True
-            st.json(result)
         else:
+            if st.button(
+                "Mostrar JSON da escoragem",
+                key="btn_show_score_json",
+                use_container_width=True,
+            ):
+                _set_panel_flag("score_json_ready", True)
             st.caption(
                 "O JSON completo só é montado sob demanda para não pesar o rerun."
             )
@@ -190,9 +223,12 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
     _ensure_edit_widget_seeds(features, client_id)
 
     st.markdown(
-        '<div style="border-left: 4px solid #2563eb; padding-left: 10px; '
-        'margin-bottom: 15px;"><h5 style="margin: 0;">Dados atualizados '
-        "para simulação</h5></div>",
+        """
+        <div class="section-band">
+            <div class="section-kicker">Simulação</div>
+            <div class="section-title">Dados atualizados para simulação</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
     with st.form("form_whatif_score", clear_on_submit=False):
@@ -229,9 +265,12 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
                 st.error(f"Falha na escoragem (HTTP {status}): {exc}")
 
     st.markdown(
-        '<div style="border-left: 4px solid #64748b; padding-left: 10px; '
-        'margin-bottom: 15px;"><h5 style="margin: 0;">Dados fixos do '
-        "cliente</h5></div>",
+        """
+        <div class="section-band">
+            <div class="section-kicker">Dossiê</div>
+            <div class="section-title">Dados fixos do cliente</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
     readonly_features = [
@@ -247,33 +286,36 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
             with col:
                 _render_readonly_feature(col_name, features.get(col_name))
 
-    if st.button(
-        "Carregar dossiê completo (todas as variáveis da ABT)",
-        key="btn_load_dossier_table",
-        use_container_width=True,
-        disabled=bool(st.session_state.get("dossier_table_ready")),
-    ):
-        st.session_state.dossier_table_ready = True
-
     if st.session_state.get("dossier_table_ready"):
+        unload_col, _ = st.columns([1, 2])
+        with unload_col:
+            if st.button(
+                "Ocultar dossiê completo",
+                key="btn_unload_dossier_table",
+                use_container_width=True,
+            ):
+                _set_panel_flag(
+                    "dossier_table_ready",
+                    False,
+                    dossier_table_cache=None,
+                )
         with st.expander(
             "Ver dossiê completo (todas as variáveis da ABT)",
             expanded=True,
         ):
-            dossier_rows = [
-                {
-                    "Variável": FEATURE_TRANSLATIONS.get(col_name, col_name),
-                    "Campo": col_name,
-                    "Valor": _format_readonly_value(col_name, value),
-                }
-                for col_name, value in features.items()
-            ]
             st.dataframe(
-                pd.DataFrame(dossier_rows),
+                _get_dossier_table(features, client_id),
                 use_container_width=True,
                 hide_index=True,
+                column_order=list(_DOSSIER_TABLE_COLUMNS),
             )
     else:
+        if st.button(
+            "Carregar dossiê completo (todas as variáveis da ABT)",
+            key="btn_load_dossier_table",
+            use_container_width=True,
+        ):
+            _set_panel_flag("dossier_table_ready", True)
         st.caption(
             "O dossiê completo da ABT só é montado sob demanda para não "
             "pesar cada interação da mesa."
@@ -341,24 +383,31 @@ def _render_mesa_tab() -> None:
 
 def _render_catalog_tab() -> None:
     """Catálogo sob demanda: markdown grande não roda a cada rerun da mesa."""
-    if not st.session_state.get("catalog_ready"):
-        st.title("Variáveis da Análise de Risco")
-        st.caption(
-            "Dicionário de fatores do motor de decisão. Carregue sob demanda "
-            "para não pesar a Mesa de Crédito."
-        )
-        if st.button(
-            "Carregar dicionário de variáveis",
-            type="secondary",
-            key="btn_load_catalog",
-        ):
-            st.session_state.catalog_ready = True
-        else:
-            st.info(
-                "O dicionário monta o markdown de todas as variáveis da ABT. "
-                "Carregue quando for consultar as descrições de negócio."
-            )
-            return
+    if st.session_state.get("catalog_ready"):
+        unload_col, _ = st.columns([1, 3])
+        with unload_col:
+            if st.button(
+                "Ocultar dicionário",
+                key="btn_unload_catalog",
+                use_container_width=True,
+            ):
+                _set_panel_flag("catalog_ready", False)
+        render_catalog(show_back_link=True)
+        return
 
-    render_catalog(show_back_link=True)
+    st.title("Variáveis da Análise de Risco")
+    st.caption(
+        "Dicionário de fatores do motor de decisão. Carregue sob demanda "
+        "para não pesar a Mesa de Crédito."
+    )
+    if st.button(
+        "Carregar dicionário de variáveis",
+        type="secondary",
+        key="btn_load_catalog",
+    ):
+        _set_panel_flag("catalog_ready", True)
+    st.info(
+        "O dicionário monta o markdown de todas as variáveis da ABT. "
+        "Carregue quando for consultar as descrições de negócio."
+    )
 
