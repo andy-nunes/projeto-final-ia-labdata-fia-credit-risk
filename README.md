@@ -1,50 +1,87 @@
-# 📊 Home Credit Default Risk - Motor de Decisão de Crédito (MLOps)
+# Home Credit Default Risk - Motor de Decisao de Credito
 
-Projeto Final MBA FIA para o desafio de Credit Risk com dados da competição
-Home Credit Default Risk.
+Projeto final de MLOps para risco de credito, baseado na competicao Kaggle
+Home Credit Default Risk. A solucao implementa uma esteira completa para
+baixar dados brutos, transformar bases transacionais em uma ABT de modelagem,
+treinar um modelo LightGBM e disponibilizar um servico de predicao consumido por
+um dashboard de simulacao para a mesa de credito.
 
-Este projeto implementa uma esteira completa de Machine Learning Operations (MLOps) para predição de risco de crédito, indo desde a ingestão de dados brutos até a disponibilização de um motor de inferência (FastAPI) e um painel de simulação para a mesa de crédito (Streamlit).
+## Objetivo De Negocio
 
-## 🏗️ Arquitetura da Solução
+O projeto apoia a decisao de concessao de credito em um contexto no qual os
+erros sao assimetricos. Recusar um bom pagador reduz receita e oportunidade
+comercial; aprovar um cliente que inadimplira pode gerar perda direta de
+credito, custo de cobranca, provisao e deterioracao da carteira.
 
-O ecossistema é totalmente containerizado e gerenciado via Docker, composto por:
+Por isso, a modelagem prioriza a reducao de falsos negativos: clientes
+historicamente inadimplentes que seriam aprovados pelo motor. A solucao busca
+combinar inclusao, criterio de risco e explicabilidade para permitir aprovar
+melhor, recusar com mais fundamento e proteger a margem da operacao.
 
-* **Apache Airflow:** Orquestrador do pipeline de dados (ETL e treinamento do modelo).
-* **MinIO (S3):** Data Lake local estruturado nos buckets `raw`, `clean`, `abt` e `artifacts`.
-* **LightGBM:** Motor matemático escolhido via experimentação para maximizar o F2-Score (foco na penalização de Falsos Negativos).
-* **FastAPI:** Microsserviço de backend responsável pela inferência e cálculo do SHAP (Explicabilidade Local).
-* **Streamlit:** Frontend focado no usuário de negócios e na inspeção de dados.
+## Metodologia
 
-Fluxo de dados entre camadas:
+A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
 
-```
-raw (CSVs Kaggle) → clean (Parquets padronizados) → abt (ABT de treino) → artifacts (modelo .pkl)
-```
+- **Analise exploratoria:** o notebook `home_credit_default_risk.ipynb` foi
+  usado para conhecer as bases, distribuicoes, nulos e relacoes iniciais entre
+  variaveis.
+- **Ingestao:** a DAG `download_kaggle_to_minio` baixa os CSVs do Kaggle e
+  publica os dados brutos no bucket `raw` do MinIO.
+- **Camada Silver:** a DAG `raw_to_clean_silver` transforma oito arquivos de
+  negocio em Parquets tratados, com QA antes da escrita no bucket `clean`.
+- **Camada Gold / ABT:** a DAG `clean_to_abt_gold` agrega historicos de bureau,
+  cartao, propostas anteriores, POS/CASH e pagamentos para gerar
+  `abt_train.parquet` no bucket `abt`.
+- **Modelagem:** a analise comparativa de modelos foi feita no notebook
+  `scripts/abt_to_model_home_credit_test.ipynb`. A partir dessa comparacao, o
+  LightGBM foi escolhido como modelo campeao e seu treino foi consolidado em
+  `scripts/abt_to_model_lightgbm.ipynb`, usando `config/model_config.yaml` para
+  features, splits, metricas e threshold.
+- **Serving:** a FastAPI carrega ABT, modelo e configuracao para expor consulta
+  de cliente e escoragem; o Streamlit consome a API e permite simulacoes
+  What-If com explicabilidade local.
 
----
+As metricas de negocio incluem PR-AUC, F2-Score, recall da classe inadimplente,
+falsos negativos, falsos positivos e taxa de reprovacao no threshold
+operacional.
 
-## ⚙️ Governança de Negócio (`model_config.yaml`)
+## Arquitetura Da Solucao
 
-Toda a lógica de infraestrutura, engenharia de atributos (features) e regras de negócios (como a régua de corte de aprovação) foi abstraída do código lógico e centralizada no arquivo estático `config/model_config.yaml`.
+<p align="center">
+  <img
+    src="docs/arquitetura-mlops-home-credit.png"
+    alt="Arquitetura MLOps do motor de decisao de credito"
+    width="900"
+  />
+</p>
 
-Qualquer alteração solicitada por auditoria ou pela diretoria de risco (ex: alterar o *threshold* de aprovação, ignorar colunas sensíveis ou ajustar hiperparâmetros) deve ser feita exclusivamente neste arquivo, garantindo controle de versão e rastreabilidade (GitOps).
+Arquivos da arquitetura: [`PNG`](docs/arquitetura-mlops-home-credit.png) e
+[`SVG`](docs/arquitetura-mlops-home-credit.svg).
 
----
+Componentes principais:
 
-## Pré-requisitos
+- **Airflow:** orquestra as DAGs manuais de ingestao, ETL, ABT e treinamento.
+- **MinIO S3:** organiza o Data Lake local nos buckets `raw`, `clean`, `abt` e
+  `artifacts`.
+- **Scripts Python:** concentram transformacoes, validacoes, pipelines e
+  inferencia para manter DAGs finas.
+- **LightGBM:** modelo supervisionado usado para predizer probabilidade de
+  inadimplencia.
+- **FastAPI:** servico de predicao com endpoints de health check, consulta de
+  cliente e escoragem.
+- **Streamlit:** interface de negocio para consulta, simulacao de variaveis e
+  leitura dos fatores explicativos.
 
-1. Docker e Docker Compose instalados na máquina host.
-2. Credenciais Kaggle em `~/.kaggle/kaggle.json` (necessário para a DAG de download).
+## Pre-Requisitos
 
----
+1. Docker e Docker Compose instalados.
+2. Credenciais Kaggle em `~/.kaggle/kaggle.json`.
+3. Porta local livre para os servicos principais: `8080`, `9000`, `9001`,
+   `8000` e `8501`.
 
-## 🚀 Roteiro de Validação (Runbook)
+## Como Treinar O Modelo
 
-Siga os passos abaixo para recriar e testar a esteira MLOps do zero.
-
-### 1. Subir a Infraestrutura Base
-
-Na raiz do projeto, inicie MinIO e Airflow em segundo plano:
+Suba a infraestrutura:
 
 ```bash
 docker compose build
@@ -84,210 +121,93 @@ docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 
 Todas as DAGs são manuais (`schedule=None`); o encadeamento Bronze → Silver → Gold → Model é automático após o trigger inicial.
 
-### 3. Subir o Motor de Inferência (API Backend)
+Saidas esperadas:
 
-Na raiz do projeto, execute:
+- `raw`: 10 CSVs da competicao Kaggle.
+- `clean`: Parquets Silver tratados e validados.
+- `abt`: `abt_train.parquet`.
+- `artifacts`: `lightgbm_hcdr.pkl` e `model_metadata.json`.
+- `Dados/abt/abt_demo_holdout.parquet`: holdout local para demonstracao na API
+  e no dashboard.
+
+Para inspecionar objetos no MinIO:
+
+```bash
+docker compose run --rm minio-client ls --recursive local/artifacts
+docker compose run --rm minio-client stat local/abt/abt_train.parquet
+```
+
+## Execucao Do Servico De Predicao
+
+Depois de treinar o modelo e publicar os artefatos no MinIO, suba a API:
 
 ```bash
 docker compose up -d api
 ```
 
-A API expõe endpoints de escoragem e explicabilidade local (SHAP). Pelo
-Compose, o dashboard da mesa de crédito consome essa API internamente via
-`API_BASE_URL=http://api:8000`.
+Valide o health check:
 
-### 4. Subir o Painel da Mesa de Crédito (Dashboard Frontend)
+```bash
+curl -sS http://localhost:8000/
+```
 
-Execute:
+Consulte o dossie de um cliente do holdout de demonstracao:
+
+```bash
+curl -sS http://localhost:8000/client/139767
+```
+
+Execute uma escoragem sem alteracoes:
+
+```bash
+curl -sS -X POST http://localhost:8000/score \
+  -H 'Content-Type: application/json' \
+  -d '{"client_id":139767,"features_override":{}}'
+```
+
+Execute uma simulacao What-If com override de features:
+
+```bash
+curl -sS -X POST http://localhost:8000/score \
+  -H 'Content-Type: application/json' \
+  -d '{"client_id":139767,"features_override":{"AMT_CREDIT":500000,"AMT_ANNUITY":25000}}'
+```
+
+Para usar a interface de negocio:
 
 ```bash
 docker compose up -d streamlit
 ```
 
-O serviço `streamlit` do `docker-compose.yml` sobe `app/dashboard.py` na porta
-8501 e depende do serviço `api`. Se a porta já estiver em uso, pare o serviço
-`streamlit` do compose ou rode manualmente em outra porta, por exemplo:
+Acesse `http://localhost:8501`. O dashboard consome a API internamente via
+`API_BASE_URL=http://api:8000`.
 
-```bash
-docker compose run --rm -p 8502:8501 dev streamlit run app/dashboard.py --server.address=0.0.0.0 --server.port=8501
-```
+## Proximos Passos De Desenvolvimento
 
-### 5. Simulação na Mesa de Crédito
+- Testar novos thresholds de aprovacao e comparar o impacto em falsos
+  negativos, falsos positivos e taxa de reprovacao.
+- Avaliar oportunidades de melhoria nas features e na regua de decisao a partir
+  da analise dos casos de acerto e erro.
+- Aprofundar a interpretacao dos principais fatores que influenciam a predicao
+  para facilitar a leitura pela mesa de credito.
 
-1. Acesse o painel: **`http://localhost:8501`**
-2. Insira um **ID de Cliente** (`SK_ID_CURR`) válido da base de holdout de demonstração (`Dados/abt/abt_demo_holdout.parquet`, gerada pelo treinamento).
-3. Analise o dossiê, faça edições cadastrais (What-If Analysis) se desejar, e clique em **"Rodar Escoragem"**.
-4. O painel exibirá a probabilidade de calote, a recomendação final e os fatores determinantes para a decisão utilizando **SHAP Values**.
+## Documentacao
 
-O dashboard usa `app/dashboard.py` como homepage. A tela exibe o motor de
-decisão de crédito, consulta a API FastAPI pelo serviço `api` do Compose e
-mantém um rodapé com os alunos responsáveis pelo desenvolvimento.
+Detalhes operacionais e tecnicos ficam em `docs/`:
 
-A homepage também possui acesso para `app/pages/catalogo_abt.py`, uma página
-Streamlit com catálogo pesquisável das colunas da ABT. O catálogo é montado por
-`app/abt_catalog.py` a partir do schema de `Dados/abt/abt_train.parquet`, das
-marcações de `config/model_config.yaml` e das descrições oficiais do arquivo
-`Dados/raw/HomeCredit_columns_description.csv`, distribuído junto aos dados da
-competição Home Credit Default Risk no Kaggle. Features derivadas recebem
-descrições inferidas pelas regras de engenharia ou pelo prefixo da fonte
-agregada. A busca, os filtros de categoria/fonte, a tabela e o download rodam
-client-side em um componente HTML/JavaScript, não como widgets Streamlit, para
-evitar crashes nativos observados no runtime ao rerenderizar a página.
-Detalhes de implementação e validação estão em `docs/catalogo-abt.md`.
-
-Os campos editáveis de simulação são definidos em `config/model_config.yaml`.
-Atualmente o painel permite alterar `AMT_CREDIT`, `AMT_ANNUITY`,
-`NAME_EDUCATION_TYPE`, `NAME_INCOME_TYPE`, `OCCUPATION_TYPE` e
-`ORGANIZATION_TYPE`. Os campos categóricos são renderizados como seleção quando
-há lista controlada de categorias.
-
-Os campos monetários `AMT_CREDIT` (Valor Solicitado) e `AMT_ANNUITY` (Valor da
-Parcela Mensal) são campos de texto validados para remover os controles
-incrementais `- / +` do Streamlit e evitar entradas inválidas. A regra é:
-
-- aceitar somente números inteiros ou decimais, incluindo vírgula decimal;
-- rejeitar texto, vazio, zero e valores negativos;
-- limite inferior fixo: `1`;
-- limite superior de `AMT_CREDIT`: `4.050.000,00`;
-- limite superior de `AMT_ANNUITY`: `258.025,50`.
-
-Os limites superiores foram extraídos de `abt_train.parquet`, usando o maior
-valor observado em cada coluna na ABT de treino. A justificativa é manter a
-simulação dentro do domínio conhecido pelo modelo LightGBM: valores acima do
-máximo visto no treinamento seriam extrapolação operacional, poderiam gerar
-scores menos confiáveis e não representam uma faixa aprendida pela esteira de
-modelagem atual.
-
-Na inferência online, a API aplica os overrides e recalcula as derivadas
-financeiras diretamente impactadas antes de chamar o LightGBM:
-`CREDIT_INCOME_RATIO`, `ANNUITY_INCOME_RATIO` e `LOG_AMT_CREDIT`. Isso evita
-combinar valores simulados com ratios antigos congelados da ABT.
-
-Os cards de resultado usam a mesma régua visual de risco:
-
-- verde para baixo risco;
-- amarelo para risco moderado;
-- vermelho para alto risco;
-- cinza para valor ausente ou desconhecido.
-
-Essa régua é aplicada a `Risk Band`, `Prob. inadimplência` e
-`Prob. adimplência`. Com `threshold=8%`, `Baixo risco` representa
-probabilidade de inadimplência abaixo de `3,2%`, `Risco moderado` representa
-probabilidade de `3,2%` até abaixo de `8%`, e `Alto risco` representa
-probabilidade de `8%` ou mais.
-
----
-
-## Ambiente com Docker
-
-### Comandos úteis
-
-Abra um shell interativo dentro do ambiente de desenvolvimento:
-
-```bash
-docker compose run --rm dev
-```
-
-Suba todos os serviços locais (MinIO, Airflow, API e Streamlit):
-
-```bash
-docker compose up -d --build
-```
-
-Reinicie tudo do zero (inclui volumes):
-
-```bash
-docker compose down -v
-```
-
-### Acessos locais
-
-- Airflow: http://localhost:8080 (SimpleAuthManager)
-- MinIO Console: http://localhost:9001 (`minioadmin` / `minioadmin`)
-- MinIO API: http://localhost:9000
-- Streamlit (dashboard da mesa de crédito): http://localhost:8501
-- API FastAPI: http://localhost:8000
-
-Todos esses serviços montam a pasta `Dados/` dentro dos containers.
-
-Na inicialização do serviço `streamlit` do compose, `scripts/ensure_minio_buckets.py` cria os buckets `raw`, `clean`, `abt` e `artifacts`.
-
-### Pipelines fora do Airflow
-
-Os mesmos fluxos podem ser executados diretamente, mantendo a lógica importada pelas DAGs:
-
-```bash
-docker compose run --rm dev python scripts/silver_pipeline.py bureau application_train
-docker compose run --rm dev python scripts/gold_pipeline.py
-```
-
-### QA, staging e publicação
-
-**Camada clean (Silver):** cada tabela possui um TaskGroup isolado com
-`coletar_e_processar -> validar -> escrever_clean`; o bucket `clean` só recebe
-Parquets aprovados. O QA registra `[PASS]`, `[WARNING]` e `[FAIL]`. Somente
-`[FAIL]` bloqueia a publicação. Staging aprovado é removido após o upload;
-staging reprovado permanece em `Dados/.silver_staging` para diagnóstico.
-
-**Camada abt (Gold):** sete TaskGroups e 17 tasks estritamente sequenciais.
-As entradas são sete Parquets do bucket `clean`. Os agregados temporários ficam
-em `Dados/.gold_staging/<run_id>` e não trafegam pelo XCom. Somente após todas
-as validações `[PASS]` o pipeline substitui `abt/abt_train.parquet`; `[INFO]`
-não reprova, `[FAIL]` bloqueia a cadeia e preserva o staging para diagnóstico.
-
-### MinIO Client
-
-Para inspecionar ou copiar arquivos entre MinIO e `Dados/`, use o serviço
-`minio-client`. Consulte `docs/minio-client.md`.
-
-Exemplos:
-
-```bash
-docker compose run --rm minio-client ls --recursive local/raw
-docker compose run --rm minio-client ls --recursive local/clean
-docker compose run --rm minio-client stat local/abt/abt_train.parquet
-```
-
-Para detalhes das DAGs Airflow disponíveis, consulte `docs/dags/README.md`.
-
----
-
-## Dados
-
-Arquivos CSV não devem ser versionados. A pasta `Dados/` existe para volumes
-locais e artefatos intermediários, mas os dados brutos baixados pelo Kaggle
-devem ser armazenados no bucket `raw` do MinIO.
-
-O holdout de demonstração (`Dados/abt/abt_demo_holdout.parquet`) é gerado
-localmente pelo pipeline de treinamento. O modelo treinado e seus metadados são
-publicados no MinIO em `s3://artifacts/lightgbm_hcdr.pkl` e
-`s3://artifacts/model_metadata.json`, para consumo posterior pela API e pelo
-dashboard da mesa de crédito.
-
----
-
-## Documentação
-
-- `docs/ambiente-docker-e-dados.md`: arquitetura local, serviços e fluxo de
-  dados entre os buckets.
-- `docs/camada-silver.md`: transformações, staging e QA de `raw` para `clean`.
-- `docs/camada-gold-abt-design.md`: transformações, staging e QA de `clean`
+- `docs/ambiente-docker-e-dados.md`: ambiente Docker, servicos e volumes.
+- `docs/camada-silver.md`: transformacoes, staging e QA de `raw` para `clean`.
+- `docs/camada-gold-abt-design.md`: transformacoes, staging e QA de `clean`
   para `abt`.
-- `docs/catalogo-abt.md`: catálogo pesquisável da ABT no Streamlit, origem dos
-  metadados, descrições em português e validações.
-- `docs/dags/README.md`: índice e comandos das DAGs manuais.
-- `docs/exemplos-confusion-matrix.md`: storytelling dos quatro cenários da
-  matriz de confusão com exemplos reais de `SK_ID_CURR`.
-- `docs/minio-client.md`: inspeção e cópia de objetos no MinIO.
-- `docs/model-config.md`: guia do `config/model_config.yaml`, incluindo
-  threshold, features, paths, overrides por variavel de ambiente e quando
-  retreinar o modelo.
+- `docs/catalogo-abt.md`: catalogo pesquisavel da ABT no Streamlit.
+- `docs/dags/README.md`: indice e comandos das DAGs manuais.
+- `docs/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
+- `docs/minio-client.md`: inspecao e copia de objetos no MinIO.
+- `docs/model-config.md`: guia do `config/model_config.yaml`.
 
----
+## Validacao Basica
 
-## Validação do projeto
-
-Depois de alterar DAGs, scripts ou testes, execute no ambiente Airflow:
+Depois de alterar DAGs, scripts ou testes, rode validacoes proporcionais:
 
 ```bash
 docker compose exec -T airflow python -m pytest /opt/airflow/tests -q
@@ -295,5 +215,5 @@ docker compose exec -T airflow airflow dags list-import-errors
 docker compose exec -T airflow airflow dags list
 ```
 
-Todo módulo, classe, helper, fixture e função de teste Python novo deve possuir
-docstring em português. A suite usa `pytest` e `pytest-mock`.
+Todo modulo, classe, helper, fixture e funcao de teste Python novo deve possuir
+docstring em portugues. A suite usa `pytest` e `pytest-mock`.
