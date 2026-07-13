@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-Reproduzir o fluxo de `HMDR_Camada_Gold_ABT.html`, agregando sete Parquets da
-camada Silver em uma tabela analítica com uma linha por cliente e `TARGET`
-preservado.
+Agregar sete Parquets da camada Silver em uma tabela analitica com uma linha por
+cliente e `TARGET` preservado, via `scripts/abt_transform.py` (com regras em
+`scripts/gold_transformations.py` e `scripts/gold_validations.py`).
 
 ## Configuração
 

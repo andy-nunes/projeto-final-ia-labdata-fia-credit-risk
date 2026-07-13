@@ -4,13 +4,15 @@ Data: 2026-06-28
 
 ## Objetivo
 
-Implementar o fluxo descrito em `HMDR_Camada_Gold_ABT.html` como um pipeline
-Python executavel e uma DAG Airflow manual. O pipeline consome sete Parquets da
-camada `clean`, cria agregados por cliente, monta e valida a ABT de treino e
-publica exclusivamente `abt/abt_train.parquet` no MinIO.
+Implementar a camada Gold/ABT como um pipeline Python executavel e uma DAG
+Airflow manual, com logica em `scripts/abt_transform.py`,
+`scripts/gold_transformations.py` e `scripts/gold_validations.py`. O pipeline
+consome sete Parquets da camada `clean`, cria agregados por cliente, monta e
+valida a ABT de treino e publica exclusivamente `abt/abt_train.parquet` no MinIO.
 
 A ABT final deve possuir uma linha por `SK_ID_CURR`, preservar `TARGET` da
-`application_train_silver` e reproduzir as features e validacoes do notebook.
+`application_train_silver` e reproduzir as features e validacoes do desenho
+original da camada Gold.
 
 ## Decisoes confirmadas
 

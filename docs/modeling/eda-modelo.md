@@ -1,7 +1,8 @@
 # Guia para iniciantes: Modelagem de Risco de Crédito
 
 Este documento explica, passo a passo e em linguagem introdutória, o notebook
-exportado como `HMDR_Modelagem_HomeCredit.html`.
+de comparação de modelos `notebooks/02_model_evaluation.ipynb` (e o treino
+exploratório em `notebooks/03_train_exploration.ipynb`).
 
 O objetivo não é ensinar cada detalhe da programação. O foco é compreender:
 
