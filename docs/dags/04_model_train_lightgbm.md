@@ -12,7 +12,7 @@ modelo no MinIO.
 - Catchup: desabilitado (`catchup=False`)
 - `max_active_runs`: `1`
 - Tags: `credit-risk`, `model`, `lightgbm`, `training`
-- Arquivo: `dags/train_lightgbm.py`
+- Arquivo: `dags/04_model_train_lightgbm.py`
 - Script importado: `scripts/train.py`
 
 ## Dependencias

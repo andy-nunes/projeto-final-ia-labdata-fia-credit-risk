@@ -46,7 +46,7 @@
   <text class="box-text" x="126" y="324">Home Credit Default Risk</text>
   <rect class="airflow" x="480" y="270" width="310" height="74"/>
   <text class="box-title" x="502" y="298">Airflow DAG</text>
-  <text class="box-text" x="502" y="322">download_kaggle_to_minio</text>
+  <text class="box-text" x="502" y="322">01_bronze_ingest_kaggle</text>
   <rect class="minio" x="905" y="270" width="270" height="74"/>
   <text class="box-title" x="927" y="298">Bucket raw</text>
   <text class="box-text" x="927" y="322">CSVs originais</text>
@@ -61,7 +61,7 @@
 
   <rect class="airflow" x="105" y="535" width="280" height="72"/>
   <text class="box-title" x="127" y="563">Airflow DAG</text>
-  <text class="box-text" x="127" y="586">raw_to_clean_silver</text>
+  <text class="box-text" x="127" y="586">02_silver_clean_data</text>
   <rect class="etl" x="500" y="535" width="300" height="72"/>
   <text class="box-title" x="522" y="563">Silver Pipeline</text>
   <text class="box-text" x="522" y="586">limpeza, QA e staging</text>
@@ -73,7 +73,7 @@
 
   <rect class="airflow" x="105" y="645" width="280" height="72"/>
   <text class="box-title" x="127" y="673">Airflow DAG</text>
-  <text class="box-text" x="127" y="696">clean_to_abt_gold</text>
+  <text class="box-text" x="127" y="696">03_gold_abt_features</text>
   <rect class="etl" x="500" y="645" width="300" height="72"/>
   <text class="box-title" x="522" y="673">Gold Pipeline</text>
   <text class="box-text" x="522" y="696">agregacoes e features</text>
@@ -96,7 +96,7 @@
   <text class="box-text" x="127" y="972">features, F2, threshold</text>
   <rect class="airflow" x="475" y="920" width="260" height="76"/>
   <text class="box-title" x="497" y="949">Airflow DAG</text>
-  <text class="box-text" x="497" y="972">train_lightgbm</text>
+  <text class="box-text" x="497" y="972">04_model_train_lightgbm</text>
   <rect class="model" x="820" y="920" width="260" height="76"/>
   <text class="box-title" x="842" y="949">LightGBM</text>
   <text class="box-text" x="842" y="972">PR-AUC, F2 e recall</text>

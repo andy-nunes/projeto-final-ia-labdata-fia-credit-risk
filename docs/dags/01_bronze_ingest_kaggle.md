@@ -11,7 +11,7 @@ armazenar os CSVs esperados no bucket `raw` do MinIO.
 - Schedule: manual (`schedule=None`)
 - Catchup: desabilitado (`catchup=False`)
 - Tags: `credit-risk`, `kaggle`, `minio`, `bronze`
-- Arquivo: `dags/download_kaggle_to_minio.py`
+- Arquivo: `dags/01_bronze_ingest_kaggle.py`
 - Script importado: `scripts/kaggle_to_minio.py`
 
 ## Dependencias

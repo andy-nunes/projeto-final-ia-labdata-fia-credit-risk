@@ -212,7 +212,7 @@ Resultado esperado:
 Comandos executados e resultados:
 
 ```bash
-python3 -m py_compile dags/download_kaggle_to_minio.py
+python3 -m py_compile dags/01_bronze_ingest_kaggle.py
 ```
 
 Resultado: passou.
@@ -274,9 +274,9 @@ docker compose exec -T airflow airflow dags list
 Resultado relevante:
 
 ```text
-01_bronze_ingest_kaggle | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
-02_silver_clean_data      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
-03_gold_abt_features      | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
+01_bronze_ingest_kaggle | /opt/airflow/dags/01_bronze_ingest_kaggle.py | airflow | True
+02_silver_clean_data      | /opt/airflow/dags/02_silver_clean_data.py      | airflow | True
+03_gold_abt_features      | /opt/airflow/dags/03_gold_abt_features.py        | airflow | True
 ```
 
 Se uma DAG existir em `dags/` mas nao aparecer na listagem depois de uma subida
@@ -482,9 +482,9 @@ docker compose exec -T airflow airflow dags list
 Resultado relevante:
 
 ```text
-01_bronze_ingest_kaggle | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
-02_silver_clean_data      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
-03_gold_abt_features      | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
+01_bronze_ingest_kaggle | /opt/airflow/dags/01_bronze_ingest_kaggle.py | airflow | True
+02_silver_clean_data      | /opt/airflow/dags/02_silver_clean_data.py      | airflow | True
+03_gold_abt_features      | /opt/airflow/dags/03_gold_abt_features.py        | airflow | True
 ```
 
 ## Camada Clean (Silver)
@@ -529,7 +529,7 @@ docker compose run --rm dev python scripts/abt_transform.py
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```
 
-Consulte [`docs/dags/clean_to_abt_gold.md`](dags/clean_to_abt_gold.md) para o
+Consulte [`docs/dags/03_gold_abt_features.md`](dags/03_gold_abt_features.md) para o
 grafo, entradas, QA e comportamento operacional.
 
 Ainda nao foram implementados:

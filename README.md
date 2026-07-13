@@ -25,12 +25,12 @@ A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
 - **Analise exploratoria:** o notebook `exp_analysis.ipynb` foi
   usado para conhecer as bases, distribuicoes, nulos e relacoes iniciais entre
   variaveis.
-- **Ingestao:** a DAG `download_kaggle_to_minio` baixa os CSVs do Kaggle e
+- **Ingestao:** a DAG `01_bronze_ingest_kaggle` baixa os CSVs do Kaggle e
   publica os dados brutos no bucket `raw` do MinIO.
-- **Camada Silver:** `scripts/data_sanitization.py` (DAG `raw_to_clean_silver`)
+- **Camada Silver:** `scripts/data_sanitization.py` (DAG `02_silver_clean_data`)
   transforma oito arquivos de negocio em Parquets tratados, com QA antes da
   escrita no bucket `clean`.
-- **Camada Gold / ABT:** `scripts/abt_transform.py` (DAG `clean_to_abt_gold`)
+- **Camada Gold / ABT:** `scripts/abt_transform.py` (DAG `03_gold_abt_features`)
   agrega historicos de bureau, cartao, propostas anteriores, POS/CASH e
   pagamentos para gerar `abt_train.parquet` no bucket `abt`.
 - **Modelagem:** a analise comparativa de modelos foi feita no notebook

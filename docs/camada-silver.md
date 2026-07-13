@@ -9,7 +9,7 @@ no bucket `clean` somente os Parquets aprovados.
 
 A implementacao foi separada por responsabilidade:
 
-- `dags/raw_to_clean_silver.py`: apenas orquestracao Airflow.
+- `dags/02_silver_clean_data.py`: apenas orquestracao Airflow.
 - `scripts/silver_transformations.py`: regras de transformacao e configuracao
   das oito tabelas.
 - `scripts/silver_validations.py`: regras de QA e logs no formato do notebook.

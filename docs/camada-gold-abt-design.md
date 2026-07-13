@@ -76,7 +76,7 @@ Este e o unico modulo importado pela DAG. A execucao direta usa:
 docker compose run --rm dev python scripts/abt_transform.py
 ```
 
-### `dags/clean_to_abt_gold.py`
+### `dags/03_gold_abt_features.py`
 
 Contem apenas a definicao da DAG, dos TaskGroups, das tasks e de suas
 dependencias. Regras de negocio e acesso a dados permanecem em `scripts/`.
@@ -241,7 +241,7 @@ docker compose exec -T airflow python -m py_compile \
   /opt/airflow/scripts/gold_transformations.py \
   /opt/airflow/scripts/gold_validations.py \
   /opt/airflow/scripts/abt_transform.py \
-  /opt/airflow/dags/clean_to_abt_gold.py
+  /opt/airflow/dags/03_gold_abt_features.py
 docker compose exec -T airflow airflow dags list-import-errors
 docker compose exec -T airflow airflow dags list
 ```
@@ -250,7 +250,7 @@ docker compose exec -T airflow airflow dags list
 
 A implementacao esta documentada em `README.md`,
 `docs/ambiente-docker-e-dados.md`, `docs/dags/README.md` e
-`docs/dags/clean_to_abt_gold.md`. Os arquivos locais ignorados `AGENTS.md` e
+`docs/dags/03_gold_abt_features.md`. Os arquivos locais ignorados `AGENTS.md` e
 `SKILL.md` devem permanecer sincronizados com este contrato.
 
 Todo codigo Python novo, inclusive modulos de teste, fixtures, classes fake,
