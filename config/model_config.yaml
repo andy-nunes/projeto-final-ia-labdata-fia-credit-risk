@@ -1,5 +1,5 @@
 # Configuração central do modelo LightGBM — editável na avaliação individual.
-# Consumido por: scripts/train.ipynb, scripts/train.py, scripts/predict.py, app/dashboard.py
+# Consumido por: notebooks/03_train_exploration.ipynb, scripts/train.py, scripts/predict.py, app/dashboard.py
 
 project:
   # Nome de registro do projeto para governança de MLOps

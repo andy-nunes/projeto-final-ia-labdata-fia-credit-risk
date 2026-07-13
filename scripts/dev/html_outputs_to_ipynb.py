@@ -372,7 +372,7 @@ def merge_outputs(html_path: Path, ipynb_path: Path) -> None:
 
 def main() -> None:
     html_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('/mnt/c/Users/Anderson/Downloads/HMDR_Modelagem_HomeCredit.html')
-    ipynb_path = Path(sys.argv[2]) if len(sys.argv) > 2 else Path('scripts/evaluation.ipynb')
+    ipynb_path = Path(sys.argv[2]) if len(sys.argv) > 2 else Path('notebooks/02_model_evaluation.ipynb')
     merge_outputs(html_path, ipynb_path)
 
 

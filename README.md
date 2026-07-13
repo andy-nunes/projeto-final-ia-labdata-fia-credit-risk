@@ -22,7 +22,7 @@ melhor, recusar com mais fundamento e proteger a margem da operacao.
 
 A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
 
-- **Analise exploratoria:** o notebook `exp_analysis.ipynb` foi
+- **Analise exploratoria:** o notebook `notebooks/01_exp_analysis.ipynb` foi
   usado para conhecer as bases, distribuicoes, nulos e relacoes iniciais entre
   variaveis.
 - **Ingestao:** a DAG `01_bronze_ingest_kaggle` baixa os CSVs do Kaggle e
@@ -34,9 +34,9 @@ A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
   agrega historicos de bureau, cartao, propostas anteriores, POS/CASH e
   pagamentos para gerar `abt_train.parquet` no bucket `abt`.
 - **Modelagem:** a analise comparativa de modelos foi feita no notebook
-  `scripts/evaluation.ipynb`. A partir dessa comparacao, o LightGBM foi
+  `notebooks/02_model_evaluation.ipynb`. A partir dessa comparacao, o LightGBM foi
   escolhido como modelo campeao e seu treino foi consolidado em
-  `scripts/train.py` / `scripts/train.ipynb`, usando `config/model_config.yaml`
+  `scripts/train.py` / `notebooks/03_train_exploration.ipynb`, usando `config/model_config.yaml`
   para features, splits, metricas e threshold.
 - **Orquestracao:** as DAGs Airflow encadeiam a esteira; o equivalente CLI e
   `scripts/pipeline_orchestration.py`.

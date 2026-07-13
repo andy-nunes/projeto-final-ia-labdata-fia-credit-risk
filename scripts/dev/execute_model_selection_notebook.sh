@@ -3,10 +3,10 @@
 # Requer Docker Desktop em execução.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-NOTEBOOK="scripts/evaluation.ipynb"
+NOTEBOOK="notebooks/02_model_evaluation.ipynb"
 
 if ! command -v docker >/dev/null 2>&1; then
   DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
