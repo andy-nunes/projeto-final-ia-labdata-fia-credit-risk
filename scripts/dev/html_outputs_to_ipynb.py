@@ -370,9 +370,37 @@ def merge_outputs(html_path: Path, ipynb_path: Path) -> None:
     print(f'Outputs aplicados em {merged}/{len(ipynb_code)} células de código -> {ipynb_path}')
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
 def main() -> None:
-    html_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('/mnt/c/Users/Anderson/Downloads/HMDR_Modelagem_HomeCredit.html')
-    ipynb_path = Path(sys.argv[2]) if len(sys.argv) > 2 else Path('notebooks/02_model_evaluation.ipynb')
+    if len(sys.argv) < 2:
+        print(
+            'Uso: python scripts/dev/html_outputs_to_ipynb.py <export.html> '
+            '[notebook.ipynb]\n'
+            'Exemplo:\n'
+            '  python scripts/dev/html_outputs_to_ipynb.py export.html '
+            'notebooks/02_model_evaluation.ipynb'
+        )
+        raise SystemExit(1)
+
+    html_path = Path(sys.argv[1])
+    if not html_path.is_absolute():
+        html_path = PROJECT_ROOT / html_path
+
+    ipynb_path = (
+        Path(sys.argv[2])
+        if len(sys.argv) > 2
+        else PROJECT_ROOT / 'notebooks/02_model_evaluation.ipynb'
+    )
+    if not ipynb_path.is_absolute():
+        ipynb_path = PROJECT_ROOT / ipynb_path
+
+    if not html_path.exists():
+        raise FileNotFoundError(f'HTML não encontrado: {html_path}')
+    if not ipynb_path.exists():
+        raise FileNotFoundError(f'Notebook não encontrado: {ipynb_path}')
+
     merge_outputs(html_path, ipynb_path)
 
 

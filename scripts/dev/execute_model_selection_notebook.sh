@@ -8,6 +8,11 @@ cd "$ROOT"
 
 NOTEBOOK="notebooks/02_model_evaluation.ipynb"
 
+if [[ ! -f "$NOTEBOOK" ]]; then
+  echo "ERRO: notebook não encontrado: $ROOT/$NOTEBOOK" >&2
+  exit 1
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
   DOCKER="/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe"
 else
