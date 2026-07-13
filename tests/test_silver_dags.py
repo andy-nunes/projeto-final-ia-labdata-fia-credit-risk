@@ -26,17 +26,18 @@ def test_only_merged_silver_dag_loads(dag_bag: DagBag) -> None:
         if "silver" in path
     }
     assert relevant_errors == {}
-    assert "raw_to_clean_silver" in dag_bag.dags
+    assert "02_silver_clean_data" in dag_bag.dags
     assert "validate_clean_silver" not in dag_bag.dags
 
 
-def test_merged_dag_has_eight_groups_and_twenty_four_tasks(dag_bag: DagBag) -> None:
-    """Cria um grupo de três tasks para cada tabela."""
-    dag = dag_bag.dags["raw_to_clean_silver"]
+def test_merged_dag_has_eight_groups_and_twenty_five_tasks(dag_bag: DagBag) -> None:
+    """Cria um grupo de três tasks para cada tabela e o trigger Gold."""
+    dag = dag_bag.dags["02_silver_clean_data"]
     expected_groups = {table_id.lower() for table_id in SILVER_TABLES}
 
-    assert set(dag.task_group.children) == expected_groups
-    assert len(dag.tasks) == 24
+    assert set(dag.task_group.children) == expected_groups | {"trigger_gold_pipeline"}
+    assert len(dag.tasks) == 25
+    assert "trigger_gold_pipeline" in dag.task_ids
     for group_id in expected_groups:
         assert {task.task_id for task in dag.task_group.children[group_id].children.values()} == {
             f"{group_id}.coletar_e_processar",
@@ -46,8 +47,9 @@ def test_merged_dag_has_eight_groups_and_twenty_four_tasks(dag_bag: DagBag) -> N
 
 
 def test_each_group_has_an_isolated_three_task_chain(dag_bag: DagBag) -> None:
-    """Encadeia somente tasks da mesma tabela e não conecta grupos."""
-    dag = dag_bag.dags["raw_to_clean_silver"]
+    """Encadeia somente tasks da mesma tabela e conecta escritas ao trigger."""
+    dag = dag_bag.dags["02_silver_clean_data"]
+    trigger = dag.get_task("trigger_gold_pipeline")
     for table_id in SILVER_TABLES:
         group_id = table_id.lower()
         collect = dag.get_task(f"{group_id}.coletar_e_processar")
@@ -59,11 +61,17 @@ def test_each_group_has_an_isolated_three_task_chain(dag_bag: DagBag) -> None:
         assert validate.upstream_task_ids == {collect.task_id}
         assert validate.downstream_task_ids == {write.task_id}
         assert write.upstream_task_ids == {validate.task_id}
-        assert write.downstream_task_ids == set()
+        assert write.downstream_task_ids == {trigger.task_id}
+
+    expected_write_ids = {
+        f"{table_id.lower()}.escrever_clean" for table_id in SILVER_TABLES
+    }
+    assert trigger.upstream_task_ids == expected_write_ids
+    assert trigger.downstream_task_ids == set()
 
 
 def test_merged_dag_is_manual_and_memory_bounded(dag_bag: DagBag) -> None:
     """Mantém execução manual e no máximo duas tasks ativas."""
-    dag = dag_bag.dags["raw_to_clean_silver"]
+    dag = dag_bag.dags["02_silver_clean_data"]
     assert dag.schedule is None
     assert dag.max_active_tasks == 2

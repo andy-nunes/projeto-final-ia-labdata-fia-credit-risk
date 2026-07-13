@@ -1,4 +1,4 @@
-"""Orquestra staging, validação e publicação da camada Silver."""
+"""Limpeza e padronização dos dados (data_sanitization): raw → clean."""
 
 from __future__ import annotations
 

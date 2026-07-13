@@ -1,7 +1,9 @@
 """
 API principal do sistema de escoragem de crédito usando FastAPI.
 """
+from functools import lru_cache
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import sys
 import os
@@ -18,6 +20,14 @@ app = FastAPI(
     title="API de Risco de Crédito - Home Credit",
     version="1.0.0"
 )
+
+
+@lru_cache(maxsize=1)
+def _catalog_explorer_html() -> str:
+    """HTML do catalogo ABT, isolado da UI Streamlit para evitar segfault."""
+    from app.abt_catalog import build_catalog_frame, render_catalog_explorer_html
+
+    return render_catalog_explorer_html(build_catalog_frame())
 
 # Atualizado para receber os dados editados pelo gerente
 class ClientRequest(BaseModel):
@@ -63,3 +73,12 @@ def get_score(request: ClientRequest):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro de inferência: {str(e)}")
+
+
+@app.get("/catalog/abt", response_class=HTMLResponse)
+def get_catalog_abt():
+    """Serve o explorador HTML do catalogo para iframe no Streamlit."""
+    try:
+        return HTMLResponse(content=_catalog_explorer_html())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Falha ao montar catálogo: {e}") from e

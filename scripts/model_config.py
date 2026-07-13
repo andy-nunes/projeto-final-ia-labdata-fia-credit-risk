@@ -207,3 +207,113 @@ def export_metadata(path: str, metadata: dict[str, Any], fs: Any | None = None) 
             handle.write(payload)
         return
     write_metadata(path, metadata)
+
+
+def _is_s3_path(path: str) -> bool:
+    return str(path).startswith("s3://")
+
+
+def load_model_metadata(
+    config: ModelConfig | None = None,
+    *,
+    fs: Any | None = None,
+) -> dict[str, Any]:
+    """Carrega metadados do treino (local primeiro; S3 como fallback)."""
+    cfg = config or get_model_config()
+    candidates: list[str] = [cfg.resolve_metadata_path(prefer_s3=False)]
+    s3_path = cfg.resolve_metadata_path(prefer_s3=True)
+    if s3_path not in candidates:
+        candidates.append(s3_path)
+
+    errors: list[Exception] = []
+    for path in candidates:
+        try:
+            if _is_s3_path(path):
+                if fs is None:
+                    import s3fs
+
+                    fs = s3fs.S3FileSystem(
+                        key=os.getenv("MINIO_ROOT_USER", "minioadmin"),
+                        secret=os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"),
+                        client_kwargs={
+                            "endpoint_url": os.getenv(
+                                "MINIO_ENDPOINT_URL", "http://minio:9000"
+                            )
+                        },
+                    )
+                with fs.open(path, "rb") as handle:
+                    return json.loads(handle.read().decode("utf-8"))
+            target = Path(path)
+            if target.is_file() and target.stat().st_size > 0:
+                with target.open(encoding="utf-8") as handle:
+                    return json.load(handle)
+        except Exception as exc:  # noqa: BLE001 — tenta próximo candidato
+            errors.append(exc)
+
+    detail = f" Último erro: {errors[-1]}" if errors else ""
+    raise FileNotFoundError(
+        "Metadados do modelo indisponíveis em artifacts/model_metadata.json "
+        f"(e fallback S3). Re-execute a DAG de treino.{detail}"
+    )
+
+
+def performance_from_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Extrai matriz de confusão e KPIs do split de teste a partir do metadata."""
+    metrics = dict(metadata.get("metrics_test") or {})
+    if not metrics:
+        raise ValueError("metadata sem metrics_test")
+
+    rows = metadata.get("splits", {}).get("rows", {})
+    test_rows = int(rows.get("test") or 0)
+    if test_rows <= 0:
+        raise ValueError("metadata sem splits.rows.test")
+
+    fn = int(round(float(metrics["fn"])))
+    fp = int(round(float(metrics["fp"])))
+    recall = float(metrics["recall_inadimplente"])
+    threshold = float(metrics.get("threshold", metadata.get("business", {}).get("threshold", 0.0)))
+
+    if "tn" in metrics and "tp" in metrics:
+        tn = int(round(float(metrics["tn"])))
+        tp = int(round(float(metrics["tp"])))
+    else:
+        # Compatível com metadados antigos que só gravavam fn/fp.
+        if recall >= 1.0:
+            tp = max(0, int(round(float(metrics.get("taxa_reprovacao", 0.0)) * test_rows)) - fp)
+        elif recall <= 0.0:
+            tp = 0
+        else:
+            tp = int(round(fn * recall / (1.0 - recall)))
+        tn = test_rows - fp - fn - tp
+
+    defaults_total = tp + fn
+    approved = tn + fn
+    base_default_rate = defaults_total / test_rows if test_rows else 0.0
+    post_model_default_rate = fn / approved if approved else 0.0
+    default_reduction = (
+        1.0 - (post_model_default_rate / base_default_rate) if base_default_rate > 0 else 0.0
+    )
+    precision = float(metrics.get("precision_inadimplente", 0.0))
+    if precision <= 0.0 and (tp + fp) > 0:
+        precision = tp / (tp + fp)
+
+    return {
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+        "tp": tp,
+        "test_rows": test_rows,
+        "defaults_total": defaults_total,
+        "approved": approved,
+        "recall": recall,
+        "precision": precision,
+        "threshold": threshold,
+        "base_default_rate": base_default_rate,
+        "post_model_default_rate": post_model_default_rate,
+        "default_reduction": default_reduction,
+        "pr_auc": float(metrics.get("pr_auc", 0.0)),
+        "roc_auc": float(metrics.get("roc_auc", 0.0)),
+        "f2": float(metrics.get("f2", 0.0)),
+        "taxa_reprovacao": float(metrics.get("taxa_reprovacao", 0.0)),
+        "f_beta": float(metadata.get("business", {}).get("f_beta", 2.0)),
+    }

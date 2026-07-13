@@ -1,4 +1,4 @@
-# DAG: raw_to_clean_silver
+# DAG: 02_silver_clean_data
 
 ## Objetivo
 
@@ -7,11 +7,11 @@ publicando no bucket `clean` somente Parquets aprovados.
 
 ## Configuração
 
-- DAG ID: `raw_to_clean_silver`
+- DAG ID: `02_silver_clean_data`
 - Schedule: manual (`schedule=None`)
 - Catchup: desabilitado
 - Concorrência: `max_active_tasks=2`
-- Pipeline: `scripts/silver_pipeline.py`
+- Pipeline: `scripts/data_sanitization.py`
 
 ## TaskGroups
 
@@ -26,6 +26,9 @@ A primeira task lê `raw` e grava em
 `[WARNING]` e `[FAIL]` seguindo o notebook. A terceira só publica no `clean`
 após QA aprovado e então remove o staging da tabela.
 
+Ao concluir todas as escritas, a task `trigger_gold_pipeline` dispara
+`03_gold_abt_features`.
+
 Uma falha bloqueia somente o restante do grupo afetado. Os demais grupos
 continuam; a execução da DAG termina em `failed` se algum grupo falhar.
 Warnings por colunas ausentes não reprovam a task quando o notebook também
@@ -37,20 +40,20 @@ e escrita incremental Parquet para evitar OOM.
 ## Execução
 
 ```bash
-docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
+docker compose exec -T airflow airflow dags trigger 02_silver_clean_data
 docker compose run --rm minio-client ls --recursive local/clean
 ```
 
 Execução direta completa:
 
 ```bash
-docker compose run --rm dev python scripts/silver_pipeline.py
-docker compose run --rm dev python scripts/silver_pipeline.py bureau application_train
+docker compose run --rm dev python scripts/data_sanitization.py
+docker compose run --rm dev python scripts/data_sanitization.py bureau application_train
 ```
 
 ## Testes
 
 ```bash
-docker compose run --rm dev pytest tests/test_silver_transformations.py tests/test_silver_validations.py tests/test_silver_pipeline.py -q
+docker compose run --rm dev pytest tests/test_silver_transformations.py tests/test_silver_validations.py tests/test_data_sanitization.py -q
 docker compose run --rm airflow python -m pytest /opt/airflow/tests/test_silver_dags.py -q
 ```

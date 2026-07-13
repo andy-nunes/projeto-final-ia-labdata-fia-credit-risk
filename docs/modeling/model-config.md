@@ -9,7 +9,7 @@ inferencia via API e dashboard Streamlit.
 O `model_config.yaml` e a fonte versionada de configuracao do modelo LightGBM.
 Ele e carregado por `scripts/model_config.py` e consumido por:
 
-- `scripts/abt_to_model_lightgbm.py`: treinamento, split, selecao de features,
+- `scripts/train.py`: treinamento, split, selecao de features,
   threshold e publicacao de artefatos.
 - `scripts/predict.py`: montagem da matriz de predicao, threshold, faixas de
   risco e carregamento de modelo/ABT.

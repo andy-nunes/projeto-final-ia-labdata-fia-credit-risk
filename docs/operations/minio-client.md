@@ -78,12 +78,12 @@ docker compose run --rm minio-client mirror /Dados/raw local/raw
 
 Use esse fluxo apenas quando houver uma razao clara para promover arquivos
 locais para o MinIO. Para os dados brutos do Kaggle, o fluxo principal do
-projeto e a DAG `download_kaggle_to_minio`.
+projeto e a DAG `01_bronze_ingest_kaggle`.
 
 ## Casos de uso
 
 - Conferir rapidamente se os buckets `raw`, `clean`, `abt` e `artifacts` existem.
-- Verificar quais CSVs foram carregados pela DAG `download_kaggle_to_minio`.
+- Verificar quais CSVs foram carregados pela DAG `01_bronze_ingest_kaggle`.
 - Baixar uma copia local de `raw` para explorar os dados fora dos containers.
 - Subir arquivos pontuais para testes manuais de pipeline.
 - Espelhar um bucket para `Dados` antes de investigar problemas em notebooks ou

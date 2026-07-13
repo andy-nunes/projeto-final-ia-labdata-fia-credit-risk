@@ -2,18 +2,18 @@
 
 ## Visao geral
 
-A camada Silver foi consolidada na DAG manual `raw_to_clean_silver`. Ela le os
+A camada Silver foi consolidada na DAG manual `02_silver_clean_data`. Ela le os
 oito CSVs de negocio no bucket `raw`, aplica as transformacoes derivadas do
 notebook `HMDR_Camada_Silver.ipynb`, valida o resultado intermediario e publica
 no bucket `clean` somente os Parquets aprovados.
 
 A implementacao foi separada por responsabilidade:
 
-- `dags/raw_to_clean_silver.py`: apenas orquestracao Airflow.
+- `dags/02_silver_clean_data.py`: apenas orquestracao Airflow.
 - `scripts/silver_transformations.py`: regras de transformacao e configuracao
   das oito tabelas.
 - `scripts/silver_validations.py`: regras de QA e logs no formato do notebook.
-- `scripts/silver_pipeline.py`: staging, validacao, upload, limpeza e execucao
+- `scripts/data_sanitization.py`: staging, validacao, upload, limpeza e execucao
   direta pela CLI.
 
 ## Fluxo da DAG
@@ -85,14 +85,14 @@ permitindo que os logs mostrem todas as reprovações encontradas na tabela.
 Pelo Airflow:
 
 ```bash
-docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
+docker compose exec -T airflow airflow dags trigger 02_silver_clean_data
 ```
 
 Pela CLI, para todas as tabelas ou para uma selecao:
 
 ```bash
-docker compose run --rm dev python scripts/silver_pipeline.py
-docker compose run --rm dev python scripts/silver_pipeline.py bureau application_train
+docker compose run --rm dev python scripts/data_sanitization.py
+docker compose run --rm dev python scripts/data_sanitization.py bureau application_train
 ```
 
 O bloco `if __name__ == "__main__"` executa o pipeline diretamente. A CLI

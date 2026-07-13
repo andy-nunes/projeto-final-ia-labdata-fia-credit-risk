@@ -3,9 +3,8 @@
 ## Objetivo
 
 O catalogo da ABT documenta, dentro do Streamlit, todas as colunas da tabela
-analitica final usada pelo modelo LightGBM. Ele e acessado pela homepage
-`app/dashboard.py` no link "Abrir catalogo de campos da ABT" e fica em
-`app/pages/catalogo_abt.py`.
+analitica final usada pelo modelo LightGBM. Ele e acessado pela aba
+**Catalogo** em `app/dashboard.py` (modulo `app/abt_catalog.py`).
 
 A tela permite consultar:
 
@@ -84,19 +83,19 @@ Ambas aparecem no catalogo, mas com `entra_no_modelo = Nao`.
 
 ## Validacao
 
-Ao alterar `app/abt_catalog.py`, `app/pages/catalogo_abt.py` ou metadados de
+Ao alterar `app/abt_catalog.py`, `app/dashboard.py` ou metadados de
 features, rode:
 
 ```bash
 docker compose run --rm streamlit python -m pytest /app/tests/test_abt_catalog.py /app/tests/test_dashboard_layout.py -q
-docker compose run --rm streamlit python -m py_compile /app/app/abt_catalog.py /app/app/pages/catalogo_abt.py /app/app/dashboard.py
+docker compose run --rm streamlit python -m py_compile /app/app/abt_catalog.py /app/app/dashboard.py
 ```
 
 Para validar o servico em execucao:
 
 ```bash
 docker compose up -d streamlit
-curl -sS -I http://localhost:8501/catalogo_abt
+curl -sS -I http://localhost:8501/
 docker compose ps streamlit
 ```
 

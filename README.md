@@ -22,24 +22,26 @@ melhor, recusar com mais fundamento e proteger a margem da operacao.
 
 A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
 
-- **Analise exploratoria:** o notebook `home_credit_default_risk.ipynb` foi
+- **Analise exploratoria:** o notebook `notebooks/01_exp_analysis.ipynb` foi
   usado para conhecer as bases, distribuicoes, nulos e relacoes iniciais entre
   variaveis.
-- **Ingestao:** a DAG `download_kaggle_to_minio` baixa os CSVs do Kaggle e
+- **Ingestao:** a DAG `01_bronze_ingest_kaggle` baixa os CSVs do Kaggle e
   publica os dados brutos no bucket `raw` do MinIO.
-- **Camada Silver:** a DAG `raw_to_clean_silver` transforma oito arquivos de
-  negocio em Parquets tratados, com QA antes da escrita no bucket `clean`.
-- **Camada Gold / ABT:** a DAG `clean_to_abt_gold` agrega historicos de bureau,
-  cartao, propostas anteriores, POS/CASH e pagamentos para gerar
-  `abt_train.parquet` no bucket `abt`.
+- **Camada Silver:** `scripts/data_sanitization.py` (DAG `02_silver_clean_data`)
+  transforma oito arquivos de negocio em Parquets tratados, com QA antes da
+  escrita no bucket `clean`.
+- **Camada Gold / ABT:** `scripts/abt_transform.py` (DAG `03_gold_abt_features`)
+  agrega historicos de bureau, cartao, propostas anteriores, POS/CASH e
+  pagamentos para gerar `abt_train.parquet` no bucket `abt`.
 - **Modelagem:** a analise comparativa de modelos foi feita no notebook
-  `scripts/abt_to_model_home_credit_test.ipynb`. A partir dessa comparacao, o
-  LightGBM foi escolhido como modelo campeao e seu treino foi consolidado em
-  `scripts/abt_to_model_lightgbm.ipynb`, usando `config/model_config.yaml` para
-  features, splits, metricas e threshold.
-- **Serving:** a FastAPI carrega ABT, modelo e configuracao para expor consulta
-  de cliente e escoragem; o Streamlit consome a API e permite simulacoes
-  What-If com explicabilidade local.
+  `notebooks/02_model_evaluation.ipynb`. A partir dessa comparacao, o LightGBM foi
+  escolhido como modelo campeao e seu treino foi consolidado em
+  `scripts/train.py` / `notebooks/03_train_exploration.ipynb`, usando `config/model_config.yaml`
+  para features, splits, metricas e threshold.
+- **Orquestracao:** as DAGs Airflow encadeiam a esteira; o equivalente CLI e
+  `scripts/pipeline_orchestration.py`.
+- **Serving:** `scripts/predict.py` alimenta a FastAPI e o Streamlit com
+  consulta de cliente, escoragem e simulacoes What-If com explicabilidade local.
 
 As metricas de negocio incluem PR-AUC, F2-Score, recall da classe inadimplente,
 falsos negativos, falsos positivos e taxa de reprovacao no threshold
@@ -49,14 +51,14 @@ operacional.
 
 <p align="center">
   <img
-    src="docs/arquitetura-mlops-home-credit.png"
+    src="docs/architecture/arquitetura-mlops-home-credit.png"
     alt="Arquitetura MLOps do motor de decisao de credito"
     width="900"
   />
 </p>
 
-Arquivos da arquitetura: [`PNG`](docs/arquitetura-mlops-home-credit.png) e
-[`SVG`](docs/arquitetura-mlops-home-credit.svg).
+Arquivos da arquitetura: [`PNG`](docs/architecture/arquitetura-mlops-home-credit.png) e
+[`SVG`](docs/architecture/arquitetura-mlops-home-credit.svg).
 
 Componentes principais:
 
@@ -88,22 +90,38 @@ docker compose build
 docker compose up -d minio airflow
 ```
 
-Acesse o Airflow em `http://localhost:8080` e execute as DAGs abaixo em
-sequencia, aguardando uma finalizar com sucesso antes de iniciar a proxima:
+*(Aguarde aproximadamente 1 a 2 minutos para a inicialização completa do Airflow e do banco de dados interno.)*
+
+Na inicialização, o container do Airflow executa `airflow db migrate` e
+`airflow dags reserialize` antes do `airflow standalone`. Isso garante que, em
+clones limpos, as DAGs montadas em `./dags` sejam serializadas no banco local e
+apareçam na listagem/UI sem comando manual adicional.
+
+O Airflow também usa hostname fixo `airflow` e define
+`AIRFLOW__CORE__HOSTNAME_CALLABLE=scripts.airflow_config.get_airflow_hostname`
+para evitar URLs internas de logs sem host, como `http://:8793/log/...`, em
+ambientes Docker diferentes.
+
+### 2. Executar o Pipeline de Dados e Treinamento (Airflow)
+
+1. Acesse o orquestrador: **`http://localhost:8080`** (auth local via SimpleAuthManager: `admin` / `admin`).
+2. Despause as quatro DAGs da esteira Medalhão e dispare apenas a primeira; as demais são acionadas automaticamente via `TriggerDagRunOperator`:
+   * `01_bronze_ingest_kaggle` — ingestão dos CSVs brutos no bucket `raw` → dispara Silver
+   * `02_silver_clean_data` — padronização e validação no bucket `clean` → dispara Gold
+   * `03_gold_abt_features` — feature engineering e ABT no bucket `abt` → dispara treino
+   * `04_model_train_lightgbm` — treinamento a partir de `s3://abt/abt_train.parquet` e exportação do modelo para `s3://artifacts/lightgbm_hcdr.pkl`
+
+Equivalente via CLI:
 
 ```bash
-docker compose exec -T airflow airflow dags unpause download_kaggle_to_minio
-docker compose exec -T airflow airflow dags trigger download_kaggle_to_minio
-
-docker compose exec -T airflow airflow dags unpause raw_to_clean_silver
-docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
-
-docker compose exec -T airflow airflow dags unpause clean_to_abt_gold
-docker compose exec -T airflow airflow dags trigger clean_to_abt_gold
-
-docker compose exec -T airflow airflow dags unpause train_lightgbm
-docker compose exec -T airflow airflow dags trigger train_lightgbm
+docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
+docker compose exec -T airflow airflow dags unpause 02_silver_clean_data
+docker compose exec -T airflow airflow dags unpause 03_gold_abt_features
+docker compose exec -T airflow airflow dags unpause 04_model_train_lightgbm
+docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
+
+Todas as DAGs são manuais (`schedule=None`); o encadeamento Bronze → Silver → Gold → Model é automático após o trigger inicial.
 
 Saidas esperadas:
 
@@ -168,26 +186,40 @@ Acesse `http://localhost:8501`. O dashboard consome a API internamente via
 
 ## Proximos Passos De Desenvolvimento
 
-- Testar novos thresholds de aprovacao e comparar o impacto em falsos
-  negativos, falsos positivos e taxa de reprovacao.
-- Avaliar oportunidades de melhoria nas features e na regua de decisao a partir
-  da analise dos casos de acerto e erro.
-- Aprofundar a interpretacao dos principais fatores que influenciam a predicao
-  para facilitar a leitura pela mesa de credito.
+Os itens **iii** (monitoramento em producao) e **iv** (acoes automatizadas e
+agentes de IA) do enunciado individual estao documentados como proposta
+teorica em
+[`docs/architecture/mlops-monitoramento-e-automacao.md`](docs/architecture/mlops-monitoramento-e-automacao.md).
+
+Resumo:
+
+- **Monitoramento:** saude da API e das DAGs, drift e qualidade dos dados,
+  acompanhamento de PR-AUC / F2 / FN-FP e do `business_threshold` contra a
+  linha de base em `model_metadata.json`, com runbook de resposta.
+- **Automacao e agentes:** triagem da fila de credito, dossie assistido para
+  a mesa, alertas de concentracao de risco, ciclo de retreino com aprovacao
+  humana e pareceres de explicabilidade a partir do `/score` — sempre com
+  humano no loop.
+
+Demais evolucoes de modelagem (threshold, features, interpretabilidade) seguem
+subordinadas a essa governanca operacional.
+
 
 ## Documentacao
 
-Detalhes operacionais e tecnicos ficam em `docs/`:
+Detalhes operacionais e tecnicos ficam em [`docs/README.md`](docs/README.md):
 
-- `docs/ambiente-docker-e-dados.md`: ambiente Docker, servicos e volumes.
-- `docs/camada-silver.md`: transformacoes, staging e QA de `raw` para `clean`.
-- `docs/camada-gold-abt-design.md`: transformacoes, staging e QA de `clean`
+- `docs/architecture/ambiente-docker-e-dados.md`: ambiente Docker, servicos e volumes.
+- `docs/pipeline/camada-silver.md`: transformacoes, staging e QA de `raw` para `clean`.
+- `docs/pipeline/camada-gold-abt-design.md`: transformacoes, staging e QA de `clean`
   para `abt`.
-- `docs/catalogo-abt.md`: catalogo pesquisavel da ABT no Streamlit.
-- `docs/dags/README.md`: indice e comandos das DAGs manuais.
-- `docs/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
-- `docs/minio-client.md`: inspecao e copia de objetos no MinIO.
-- `docs/model-config.md`: guia do `config/model_config.yaml`.
+- `docs/operations/catalogo-abt.md`: catalogo pesquisavel da ABT no Streamlit.
+- `docs/pipeline/dags/README.md`: indice e comandos das DAGs manuais.
+- `docs/modeling/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
+- `docs/operations/minio-client.md`: inspecao e copia de objetos no MinIO.
+- `docs/modeling/model-config.md`: guia do `config/model_config.yaml`.
+- `docs/architecture/mlops-monitoramento-e-automacao.md`: proposta de monitoramento (iii) e
+  de automacao / agentes de IA (iv).
 
 ## Validacao Basica
 
