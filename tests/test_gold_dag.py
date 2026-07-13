@@ -18,11 +18,11 @@ def gold_dag():
         path: error for path, error in bag.import_errors.items() if "gold" in path
     }
     assert relevant_errors == {}
-    return bag.dags["clean_to_abt_gold"]
+    return bag.dags["03_gold_abt_features"]
 
 
 def test_gold_dag_is_manual_sequential_and_grouped(gold_dag) -> None:
-    """Mantém configuração manual, sete grupos e dezessete tasks."""
+    """Mantém configuração manual, sete grupos e dezoito tasks."""
     assert gold_dag.schedule is None
     assert gold_dag.catchup is False
     assert gold_dag.max_active_runs == 1
@@ -34,12 +34,14 @@ def test_gold_dag_is_manual_sequential_and_grouped(gold_dag) -> None:
         "previous_application",
         "installments",
         "abt_final",
+        "trigger_model_training",
     }
-    assert len(gold_dag.tasks) == 17
+    assert len(gold_dag.tasks) == 18
+    assert "trigger_model_training" in gold_dag.task_ids
 
 
 def test_gold_dag_has_the_confirmed_task_sequence(gold_dag) -> None:
-    """Encadeia todas as fronteiras de processamento, QA e escrita."""
+    """Encadeia todas as fronteiras de processamento, QA, escrita e trigger."""
     sequence = [
         "application_train.processar_application",
         "application_train.validar_application",
@@ -58,6 +60,7 @@ def test_gold_dag_has_the_confirmed_task_sequence(gold_dag) -> None:
         "abt_final.montar_abt",
         "abt_final.validar_abt",
         "abt_final.escrever_abt",
+        "trigger_model_training",
     ]
 
     for current_id, next_id in zip(sequence, sequence[1:]):

@@ -2,7 +2,7 @@
 
 ## Visao geral
 
-A camada Silver foi consolidada na DAG manual `raw_to_clean_silver`. Ela le os
+A camada Silver foi consolidada na DAG manual `02_silver_clean_data`. Ela le os
 oito CSVs de negocio no bucket `raw`, aplica as transformacoes derivadas do
 notebook `HMDR_Camada_Silver.ipynb`, valida o resultado intermediario e publica
 no bucket `clean` somente os Parquets aprovados.
@@ -85,7 +85,7 @@ permitindo que os logs mostrem todas as reprovações encontradas na tabela.
 Pelo Airflow:
 
 ```bash
-docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
+docker compose exec -T airflow airflow dags trigger 02_silver_clean_data
 ```
 
 Pela CLI, para todas as tabelas ou para uma selecao:

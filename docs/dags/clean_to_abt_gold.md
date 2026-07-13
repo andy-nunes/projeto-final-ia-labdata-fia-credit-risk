@@ -1,4 +1,4 @@
-# DAG: clean_to_abt_gold
+# DAG: 03_gold_abt_features
 
 ## Objetivo
 
@@ -8,7 +8,7 @@ preservado.
 
 ## Configuração
 
-- DAG ID: `clean_to_abt_gold`
+- DAG ID: `03_gold_abt_features`
 - Schedule: manual (`schedule=None`)
 - Catchup: desabilitado
 - Execuções simultâneas: `max_active_runs=1`
@@ -26,9 +26,10 @@ application_train: processar -> validar
   -> previous_application: processar -> validar
   -> installments: processar -> validar
   -> abt_final: montar -> validar -> escrever
+  -> trigger_model_training
 ```
 
-São sete TaskGroups e 17 tasks. A cadeia é estritamente sequencial: qualquer
+São sete TaskGroups e 18 tasks (incluindo o trigger do treino). A cadeia é estritamente sequencial: qualquer
 falha bloqueia todas as etapas posteriores e impede a escrita no bucket `abt`.
 
 ## Entradas
@@ -72,7 +73,7 @@ uma `GoldValidationError`. O QA final exige 307.511 linhas, chave única,
 ## Execução
 
 ```bash
-docker compose exec -T airflow airflow dags trigger clean_to_abt_gold
+docker compose exec -T airflow airflow dags trigger 03_gold_abt_features
 docker compose run --rm dev python scripts/gold_pipeline.py
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```

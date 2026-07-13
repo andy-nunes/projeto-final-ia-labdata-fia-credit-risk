@@ -1,8 +1,9 @@
 # DAGs
 
 Esta pasta documenta as DAGs Airflow do projeto. Todas as DAGs atuais sao
-manuais (`schedule=None`) e devem ser disparadas sob demanda pela interface do
-Airflow ou pela CLI.
+manuais (`schedule=None`). A esteira Medalhão encadeia automaticamente
+Bronze → Silver → Gold → Model via `TriggerDagRunOperator`; basta despausar
+as quatro DAGs e disparar `01_bronze_ingest_kaggle`.
 
 A arquitetura, a semantica de QA, o staging e a execucao direta da camada
 Silver estao detalhados em [`docs/camada-silver.md`](../camada-silver.md).
@@ -14,17 +15,17 @@ projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
 
 ## DAGs disponiveis
 
-- [`download_kaggle_to_minio`](download_kaggle_to_minio.md): baixa os dados
+- [`01_bronze_ingest_kaggle`](download_kaggle_to_minio.md): baixa os dados
   brutos da competicao Home Credit Default Risk e substitui os CSVs no bucket
-  `raw` do MinIO.
-- [`raw_to_clean_silver`](raw_to_clean_silver.md): transforma oito CSVs do
+  `raw` do MinIO; ao final dispara `02_silver_clean_data`.
+- [`02_silver_clean_data`](raw_to_clean_silver.md): transforma oito CSVs do
   bucket `raw` em Parquets validados no bucket `clean`, com oito TaskGroups
-  independentes de três tasks.
-- [`clean_to_abt_gold`](clean_to_abt_gold.md): agrega sete Parquets do bucket
+  independentes de três tasks; ao final dispara `03_gold_abt_features`.
+- [`03_gold_abt_features`](clean_to_abt_gold.md): agrega sete Parquets do bucket
   `clean` em uma ABT validada no bucket `abt`, com sete TaskGroups e 17 tasks
-  sequenciais.
-- [`train_lightgbm`](train_lightgbm.md): treina o modelo a partir da ABT no
-  bucket `abt` e publica modelo e metadados no bucket `artifacts`.
+  sequenciais; ao final dispara `04_model_train_lightgbm`.
+- [`04_model_train_lightgbm`](train_lightgbm.md): treina o modelo a partir da ABT no
+  bucket `abt` e publica modelo e metadados no bucket `artifacts` (fim da esteira).
 
 ## Comandos uteis
 

@@ -83,9 +83,11 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
 3. Rode `docker compose build`.
 4. Suba os servicos com `docker compose up -d minio airflow api streamlit`.
 5. Acesse Airflow, MinIO, API e Streamlit nos enderecos locais.
-6. Para carregar os CSVs no bucket `raw`, dispare a DAG `download_kaggle_to_minio`.
-7. Para promover os dados para `clean`, dispare `raw_to_clean_silver`.
-8. Para construir a ABT final no bucket `abt`, dispare `clean_to_abt_gold`.
+6. Para carregar os CSVs no bucket `raw` e encadear o restante da esteira,
+   dispare a DAG `01_bronze_ingest_kaggle` (ela aciona automaticamente
+   `02_silver_clean_data` → `03_gold_abt_features` → `04_model_train_lightgbm`).
+7. Aguarde a conclusão das etapas Silver/Gold/Model na UI do Airflow.
+8. Confirme a ABT final no bucket `abt` e os artefatos no bucket `artifacts`.
 
 Comportamento do servico `dev`:
 
@@ -122,7 +124,7 @@ Comportamento do servico `airflow`:
   `8793`.
 - Define `ABT_PATH=s3://abt/abt_train.parquet`, `MODEL_PATH=s3://artifacts/lightgbm_hcdr.pkl`
   e `MODEL_METADATA_PATH=s3://artifacts/model_metadata.json` para que a DAG
-  `train_lightgbm` leia a ABT e publique os artefatos de modelo no MinIO.
+  `04_model_train_lightgbm` leia a ABT e publique os artefatos de modelo no MinIO.
 - Executa `airflow db migrate` e `airflow dags reserialize` antes do
   `airflow standalone`, garantindo que as DAGs sejam registradas no banco local
   em clones novos.
@@ -133,8 +135,8 @@ Comandos principais:
 docker compose build
 docker compose run --rm dev
 docker compose up -d minio airflow streamlit
-docker compose exec -T airflow airflow dags unpause download_kaggle_to_minio
-docker compose exec -T airflow airflow dags trigger download_kaggle_to_minio
+docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
+docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
 
 Para reiniciar o ambiente do zero:
@@ -145,7 +147,7 @@ docker compose down -v
 
 ## Download dos Dados Kaggle
 
-A DAG manual `download_kaggle_to_minio` baixa os arquivos da competicao
+A DAG manual `01_bronze_ingest_kaggle` baixa os arquivos da competicao
 `home-credit-default-risk` e envia os CSVs para o bucket `raw` no MinIO.
 
 A DAG sempre recarrega os dados brutos quando executada manualmente:
@@ -160,8 +162,8 @@ A DAG sempre recarrega os dados brutos quando executada manualmente:
 Comando para disparar manualmente:
 
 ```bash
-docker compose exec -T airflow airflow dags unpause download_kaggle_to_minio
-docker compose exec -T airflow airflow dags trigger download_kaggle_to_minio
+docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
+docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
 
 Resultado esperado:
@@ -272,9 +274,9 @@ docker compose exec -T airflow airflow dags list
 Resultado relevante:
 
 ```text
-download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
-raw_to_clean_silver      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
-clean_to_abt_gold        | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
+01_bronze_ingest_kaggle | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
+02_silver_clean_data      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
+03_gold_abt_features      | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
 ```
 
 Se uma DAG existir em `dags/` mas nao aparecer na listagem depois de uma subida
@@ -286,7 +288,7 @@ docker compose exec -T airflow airflow dags list
 ```
 
 ```bash
-docker compose exec -T airflow airflow tasks states-for-dag-run download_kaggle_to_minio manual__2026-06-24T00:11:24+00:00
+docker compose exec -T airflow airflow tasks states-for-dag-run 01_bronze_ingest_kaggle manual__2026-06-24T00:11:24+00:00
 ```
 
 Resultado relevante:
@@ -427,7 +429,7 @@ Buckets criados:
 - `artifacts`
 
 O sincronismo automatico da pasta local `Dados` para buckets foi removido. A
-carga de dados brutos agora acontece pela DAG `download_kaggle_to_minio`, que
+carga de dados brutos agora acontece pela DAG `01_bronze_ingest_kaggle`, que
 envia os CSVs ao bucket `raw`.
 
 Objetos verificados em `raw`:
@@ -481,14 +483,14 @@ docker compose exec -T airflow airflow dags list
 Resultado relevante:
 
 ```text
-download_kaggle_to_minio | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
-raw_to_clean_silver      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
-clean_to_abt_gold        | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
+01_bronze_ingest_kaggle | /opt/airflow/dags/download_kaggle_to_minio.py | airflow | True
+02_silver_clean_data      | /opt/airflow/dags/raw_to_clean_silver.py      | airflow | True
+03_gold_abt_features      | /opt/airflow/dags/clean_to_abt_gold.py        | airflow | True
 ```
 
 ## Camada Clean (Silver)
 
-A DAG manual `raw_to_clean_silver` lê oito CSVs do bucket `raw` e cria oito
+A DAG manual `02_silver_clean_data` lê oito CSVs do bucket `raw` e cria oito
 TaskGroups independentes. Cada grupo coleta e processa no staging, valida com as
 regras de `HMDR_Camada_Silver.ipynb` e só então publica no bucket `clean`.
 O fluxo operacional fica em `scripts/silver_pipeline.py`; regras puras ficam em
@@ -504,14 +506,14 @@ Consulte [`docs/camada-silver.md`](camada-silver.md) para a arquitetura completa
 semantica de falhas, execucao pela CLI e testes pytest.
 
 ```bash
-docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
+docker compose exec -T airflow airflow dags trigger 02_silver_clean_data
 docker compose run --rm minio-client ls --recursive local/clean
 docker compose run --rm dev python scripts/silver_pipeline.py bureau
 ```
 
 ## Camada Gold (ABT)
 
-A DAG manual `clean_to_abt_gold` consome sete Parquets do bucket `clean` e
+A DAG manual `03_gold_abt_features` consome sete Parquets do bucket `clean` e
 executa 17 tasks sequenciais em sete TaskGroups. Cada origem é processada e
 validada antes da próxima; o grupo final monta, valida e publica
 `abt/abt_train.parquet`.
@@ -523,7 +525,7 @@ execução. A validação final exige exatamente 307.511 clientes e preservaçã
 `TARGET`.
 
 ```bash
-docker compose exec -T airflow airflow dags trigger clean_to_abt_gold
+docker compose exec -T airflow airflow dags trigger 03_gold_abt_features
 docker compose run --rm dev python scripts/gold_pipeline.py
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```

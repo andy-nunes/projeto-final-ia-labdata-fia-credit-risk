@@ -6,8 +6,9 @@ import pytest
 
 
 DASHBOARD_PATH = Path(__file__).resolve().parents[1] / "app" / "dashboard.py"
-CATEGORY_PAGE_PATH = (
-    Path(__file__).resolve().parents[1] / "app" / "pages" / "catalogo_abt.py"
+PAGES_DIR = Path(__file__).resolve().parents[1] / "app" / "pages"
+CATALOG_MODULE_PATH = (
+    Path(__file__).resolve().parents[1] / "app" / "abt_catalog.py"
 )
 if not DASHBOARD_PATH.exists():
     pytest.skip("O container atual nao monta app/dashboard.py.", allow_module_level=True)
@@ -154,11 +155,116 @@ def test_clear_button_does_not_mutate_widget_state_after_render() -> None:
     app = AppTest.from_file(str(DASHBOARD_PATH), default_timeout=30)
     app.run()
 
-    app.button[1].click()
+    app.button(key="btn_limpar").click()
     app.run()
 
     assert len(app.exception) == 0
-    assert app.text_input[0].value == "139767"
+    assert app.session_state["sk_id_input"] == "139767"
+
+
+def test_score_flow_preserves_client_state_after_second_rerun() -> None:
+    """Verifica que escoragem nao reseta o dossie carregado em reruns seguintes."""
+    sample = {
+        "features": {
+            "SK_ID_CURR": 139767,
+            "TARGET": 0,
+            "AMT_CREDIT": 2013840.0,
+            "AMT_ANNUITY": 53253.0,
+            "NAME_EDUCATION_TYPE": "HIGHER EDUCATION",
+            "NAME_INCOME_TYPE": "COMMERCIAL ASSOCIATE",
+            "OCCUPATION_TYPE": "MANAGERS",
+            "ORGANIZATION_TYPE": "BUSINESS ENTITY TYPE 3",
+            "EXT_SOURCE_1": 500.0,
+            "EXT_SOURCE_2": 300.0,
+            "EXT_SOURCE_3": 200.0,
+            "DAYS_BIRTH": -12000,
+            "DAYS_EMPLOYED": -2000,
+            "DAYS_ID_PUBLISH": -5000,
+            "EXT_SOURCE_MEAN": 0.33,
+            "EXT_SOURCE_CNT": 3,
+            "FLAG_EMPLOYED": 1,
+            "DAYS_EMPLOYED_YEARS": 5.5,
+            "BUREAU_AMT_DEBT_SUM": 10000,
+            "BUREAU_DAYS_CREDIT_MIN": -1000,
+            "PREV_DAYS_DECISION_MIN": -500,
+            "INST_DIAS_ATRASO_MEAN": 0,
+            "INST_AMT_PAYMENT_SUM": 5000,
+        }
+    }
+    score = {
+        "label": "Aprovado",
+        "risk_band": "Baixo risco",
+        "probability": 0.02,
+        "prediction": 0,
+        "threshold": 0.08,
+        "sk_id_curr": 139767,
+        "applied_overrides": {},
+        "top_positive_factors": [["EXT_SOURCE_MEAN", 12.5]],
+        "top_risk_factors": [],
+    }
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(dashboard, "api_get_client", lambda _client_id: sample)
+        monkeypatch.setattr(dashboard, "api_post_score", lambda _client_id, _overrides: score)
+
+        app = AppTest.from_file(str(DASHBOARD_PATH), default_timeout=30)
+        app.run()
+        app.text_input(key="sk_id_input").set_value("139767")
+        next(b for b in app.button if b.label == "Consultar Cliente").click().run()
+        assert len(app.exception) == 0
+
+        page_text = "\n".join(str(element.value) for element in app.markdown)
+        assert "Cliente" in page_text
+
+        next(
+            b for b in app.button if b.label == "Rodar Escoragem de Crédito"
+        ).click().run()
+        assert len(app.exception) == 0
+
+        page_text = "\n".join(str(element.value) for element in app.markdown)
+        assert "Parecer" in page_text
+        assert "Informe um SK_ID_CURR válido" not in "\n".join(
+            str(element.value) for element in app.info
+        )
+        assert app.session_state["client_features"] is not None
+        assert app.session_state["score_result"] is not None
+
+        app.run()
+        assert len(app.exception) == 0
+        assert app.session_state["client_features"] is not None
+        assert "Informe um SK_ID_CURR válido" not in "\n".join(
+            str(element.value) for element in app.info
+        )
+
+
+def test_invalid_consult_does_not_clear_loaded_dossier() -> None:
+    """Consulta inválida não pode apagar o dossiê já carregado."""
+    sample = {
+        "features": {
+            "SK_ID_CURR": 139767,
+            "TARGET": 0,
+            "AMT_CREDIT": 1000.0,
+            "AMT_ANNUITY": 100.0,
+            "NAME_EDUCATION_TYPE": "HIGHER EDUCATION",
+            "NAME_INCOME_TYPE": "WORKING",
+            "OCCUPATION_TYPE": "MANAGERS",
+            "ORGANIZATION_TYPE": "OTHER",
+        }
+    }
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(dashboard, "api_get_client", lambda _client_id: sample)
+        app = AppTest.from_file(str(DASHBOARD_PATH), default_timeout=30)
+        app.run()
+        app.text_input(key="sk_id_input").set_value("139767")
+        next(b for b in app.button if b.label == "Consultar Cliente").click().run()
+        assert app.session_state["client_features"] is not None
+
+        app.text_input(key="sk_id_input").set_value("abc")
+        next(b for b in app.button if b.label == "Consultar Cliente").click().run()
+        assert app.session_state["client_features"] is not None
+        assert app.session_state["client_id"] == 139767
+        assert any("inteiro positivo" in str(e.value) for e in app.error)
 
 
 def test_dashboard_renders_project_copy_without_student_footer() -> None:
@@ -176,7 +282,7 @@ def test_dashboard_renders_project_copy_without_student_footer() -> None:
         "Motor de decisão de crédito com dados Home Credit, modelo LightGBM "
         "e API de escoragem"
     ) in page_text
-    assert "Consulte o catálogo de campos da ABT" in page_text
+    assert "Consulte as variáveis da análise de risco" in page_text
     assert "Desenvolvido por" not in page_text
     assert "Anderson Nunes" not in page_text
     assert "Mateus Nicolas" not in page_text
@@ -184,20 +290,109 @@ def test_dashboard_renders_project_copy_without_student_footer() -> None:
 
 
 def test_dashboard_catalog_navigation_does_not_use_page_link_registry() -> None:
-    """Verifica que a navegacao do catalogo nao depende do registry multipagina."""
+    """Verifica navegacao in-app do catalogo via abas sem registry multipage."""
     source = DASHBOARD_PATH.read_text(encoding="utf-8")
 
     assert "st.page_link" not in source
-    assert "/catalogo_abt" in source
+    assert "st.switch_page" not in source
+    assert "/catalogo_abt" not in source
+    assert "tab_mesa, tab_catalogo, tab_performance = st.tabs(" in source
+    assert '"🏦 Mesa de Crédito"' in source
+    assert '"📖 Variáveis da Análise de Risco"' in source
+    assert '"📈 Performance & ROI do Modelo"' in source
+    assert 'st.form("form_busca_cliente"' in source
+    assert "def main() -> None:" in source
+    assert 'if __name__ == "__main__":' in source
+    assert "_configure_page" in source
+    assert "_init_session_state" in source
+    assert "_render_mesa_tab" in source
+    assert "_render_client_workspace" in source
+    assert 'st.form("form_whatif_score"' in source
+    assert "@st.fragment" not in source
+    assert "_render_score_result" in source
+    assert "_seed_edit_widgets_from_features" in source
+    assert "_collect_overrides_from_session" in source
+    assert "_render_readonly_feature" in source
+    assert 'key="btn_consultar"' not in source
+    assert 'key="btn_rodar_escoragem"' not in source
+    assert "Rodar Escoragem de Crédito" in source
+    assert "render_catalog(show_back_link=True)" in source
+    assert "catalog_ready" in source
+    assert 'key="btn_load_catalog"' in source
+    assert "dossier_table_ready" in source
+    assert 'key="btn_load_dossier_table"' in source
+    assert "score_json_ready" in source
+    assert 'key="btn_show_score_json"' in source
+    assert "segment_rankings_cache" in source
+    assert "_get_holdout_risk_scores" in source
+    assert "_local_file_fingerprint" in source
+    assert 'key="btn_retry_model_metrics"' in source
+    assert "st.rerun()" not in source
+    assert "Catálogo em manutenção para otimização de performance." not in source
+    assert '@st.cache_data(show_spinner=False)' in source
+    assert source.count("@st.cache_data(show_spinner=False)") == 1
+    assert "holdout_segment_risk_ready" in source
+    assert 'key="btn_load_segment_risk"' in source
+    assert "_get_model_test_performance" in source
+    assert '@st.cache_data(show_spinner="Carregando métricas oficiais do modelo...")' not in source
+    assert '@st.cache_data(show_spinner="Calculando risco da carteira Holdout...")' not in source
+    assert "### KPIs Executivos de Saneamento da Carteira" in source
+    assert "### Métricas de Discriminação e Captura" in source
+    assert "ROC-AUC:" in source
+    assert "PR-AUC:" in source
+    assert "_format_decimal_br" in source
+    assert "_render_confusion_matrix" in source
+    assert "test_performance_from_metadata" in source
+    assert "load_model_metadata" in source
+    assert "### Storytelling de Risco e Defesa do Modelo" not in source
+    assert "### Mapeamento de Risco por Segmento (Variáveis Editáveis)" in source
+    assert "performance_profile_attr" not in source
+    assert "st.bar_chart" not in source
+    assert "Mais seguras" in source
+    assert "Mais arriscadas" in source
+    assert "len(ranking) <= 5" in source
+    assert "Taxa de Calote Base: 8,07%" not in source
+    assert "tn=34455" not in source
+    assert "fp=21801" not in source
+    assert "fn=1241" not in source
+    assert "tp=3698" not in source
+    assert "tn=int(perf[\"tn\"])" in source
+    assert "cm-cell-ok" in source
+    assert "import seaborn as sns" not in source
+    assert "st.pyplot(" not in source
+    assert "st.radio(" not in source
+    assert 'key="dashboard_view"' not in source
+    assert "st.dataframe(" in source
+    assert "Não apaga dossiê já carregado" in source
+    assert "from scripts.predict import (" not in source.split("def _load_holdout_risk_scores")[0]
 
 
-def test_catalog_filters_use_links_to_avoid_native_select_crash() -> None:
-    """Verifica que catalogo usa componente client-side sem widgets instaveis."""
-    source = CATEGORY_PAGE_PATH.read_text(encoding="utf-8")
+def test_catalog_page_is_disabled_to_avoid_duplicate_sidebar_entry() -> None:
+    """Garante que nao existe pagina multipage antiga no menu lateral."""
+    assert not (PAGES_DIR / "catalogo_abt.py").exists()
+    page_files = list(PAGES_DIR.glob("*.py")) if PAGES_DIR.exists() else []
+    assert page_files == []
 
-    assert "st.multiselect" not in source
-    assert "st.selectbox" not in source
-    assert "st.text_input" not in source
-    assert "st.download_button" not in source
-    assert "components.html" in source
-    assert "render_catalog_explorer_html" in source
+
+def test_catalog_uses_native_business_dictionary_layout() -> None:
+    """Verifica dicionario nativo sem widgets instaveis nem iframe/tabela."""
+    catalog_source = CATALOG_MODULE_PATH.read_text(encoding="utf-8")
+
+    assert "st.multiselect" not in catalog_source
+    assert "st.selectbox" not in catalog_source
+    assert "st.download_button" not in catalog_source
+    assert "st.dataframe" not in catalog_source
+    assert "components.html" not in catalog_source
+    assert "st.iframe" not in catalog_source
+    assert "st.metric" not in catalog_source
+    assert "st.expander" not in catalog_source
+    assert 'st.title("Variáveis da Análise de Risco")' in catalog_source
+    assert "HIGHLIGHT_COLUMNS" in catalog_source
+    assert "BUSINESS_DESCRIPTIONS" in catalog_source
+    assert "format_variable_entry" in catalog_source
+    assert "def render_catalog" in catalog_source
+    # Texto generico so pode existir como constante de bloqueio.
+    assert 'GENERIC_FORBIDDEN = "Feature criada na camada Gold' in catalog_source
+    assert catalog_source.count(
+        "Feature criada na camada Gold a partir das tabelas limpas do projeto."
+    ) == 1

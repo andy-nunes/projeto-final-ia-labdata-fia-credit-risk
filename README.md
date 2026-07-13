@@ -66,23 +66,23 @@ ambientes Docker diferentes.
 ### 2. Executar o Pipeline de Dados e Treinamento (Airflow)
 
 1. Acesse o orquestrador: **`http://localhost:8080`** (auth local via SimpleAuthManager: `admin` / `admin`).
-2. Despause e execute as DAGs sequencialmente (aguarde uma finalizar com sucesso antes de iniciar a próxima):
-   * `download_kaggle_to_minio` — ingestão dos CSVs brutos no bucket `raw`
-   * `raw_to_clean_silver` — padronização e validação no bucket `clean`
-   * `clean_to_abt_gold` — feature engineering e ABT no bucket `abt`
-   * `train_lightgbm` — treinamento a partir de `s3://abt/abt_train.parquet` e exportação do modelo para `s3://artifacts/lightgbm_hcdr.pkl`
+2. Despause as quatro DAGs da esteira Medalhão e dispare apenas a primeira; as demais são acionadas automaticamente via `TriggerDagRunOperator`:
+   * `01_bronze_ingest_kaggle` — ingestão dos CSVs brutos no bucket `raw` → dispara Silver
+   * `02_silver_clean_data` — padronização e validação no bucket `clean` → dispara Gold
+   * `03_gold_abt_features` — feature engineering e ABT no bucket `abt` → dispara treino
+   * `04_model_train_lightgbm` — treinamento a partir de `s3://abt/abt_train.parquet` e exportação do modelo para `s3://artifacts/lightgbm_hcdr.pkl`
 
 Equivalente via CLI:
 
 ```bash
-docker compose exec -T airflow airflow dags unpause download_kaggle_to_minio
-docker compose exec -T airflow airflow dags trigger download_kaggle_to_minio
-docker compose exec -T airflow airflow dags trigger raw_to_clean_silver
-docker compose exec -T airflow airflow dags trigger clean_to_abt_gold
-docker compose exec -T airflow airflow dags trigger train_lightgbm
+docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
+docker compose exec -T airflow airflow dags unpause 02_silver_clean_data
+docker compose exec -T airflow airflow dags unpause 03_gold_abt_features
+docker compose exec -T airflow airflow dags unpause 04_model_train_lightgbm
+docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
 
-Todas as DAGs são manuais (`schedule=None`) e devem ser disparadas sob demanda.
+Todas as DAGs são manuais (`schedule=None`); o encadeamento Bronze → Silver → Gold → Model é automático após o trigger inicial.
 
 ### 3. Subir o Motor de Inferência (API Backend)
 

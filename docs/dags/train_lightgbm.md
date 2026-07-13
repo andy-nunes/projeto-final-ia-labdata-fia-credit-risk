@@ -1,4 +1,4 @@
-# DAG: train_lightgbm
+# DAG: 04_model_train_lightgbm
 
 ## Objetivo
 
@@ -7,7 +7,7 @@ modelo no MinIO.
 
 ## Configuracao
 
-- DAG ID: `train_lightgbm`
+- DAG ID: `04_model_train_lightgbm`
 - Schedule: manual (`schedule=None`)
 - Catchup: desabilitado (`catchup=False`)
 - `max_active_runs`: `1`
@@ -77,13 +77,13 @@ holdout de demonstracao e persistido localmente para consumo da aplicacao.
 Pela CLI:
 
 ```bash
-docker compose exec -T airflow airflow dags trigger train_lightgbm
+docker compose exec -T airflow airflow dags trigger 04_model_train_lightgbm
 ```
 
 Pela interface:
 
 1. Acesse `http://localhost:8080`.
-2. Abra a DAG `train_lightgbm`.
+2. Abra a DAG `04_model_train_lightgbm`.
 3. Use a acao de trigger manual.
 
 ## Como validar
@@ -91,7 +91,7 @@ Pela interface:
 Conferir a ultima execucao:
 
 ```bash
-docker compose exec -T airflow airflow dags list-runs train_lightgbm
+docker compose exec -T airflow airflow dags list-runs 04_model_train_lightgbm
 ```
 
 Conferir artefatos no MinIO:

@@ -5,7 +5,12 @@ import pandas as pd
 import pytest
 import yaml
 
-from scripts.model_config import ModelConfig, load_model_config, write_metadata
+from scripts.model_config import (
+    ModelConfig,
+    load_model_config,
+    test_performance_from_metadata,
+    write_metadata,
+)
 from scripts.abt_to_model_lightgbm import split_abt_three_way, split_features_target
 
 
@@ -83,3 +88,48 @@ def test_write_metadata_creates_json(tmp_path: Path) -> None:
     write_metadata(target, {"trained_at": "2026-01-01", "threshold": 0.25})
     payload = json.loads(target.read_text(encoding="utf-8"))
     assert payload["threshold"] == 0.25
+
+
+def test_test_performance_from_metadata_uses_stored_confusion_cells() -> None:
+    metadata = {
+        "splits": {"rows": {"test": 1000}},
+        "business": {"threshold": 0.08},
+        "metrics_test": {
+            "tn": 700,
+            "fp": 200,
+            "fn": 30,
+            "tp": 70,
+            "recall_inadimplente": 0.7,
+            "threshold": 0.08,
+        },
+    }
+    perf = test_performance_from_metadata(metadata)
+    assert perf["tn"] == 700
+    assert perf["fp"] == 200
+    assert perf["fn"] == 30
+    assert perf["tp"] == 70
+    assert perf["approved"] == 730
+    assert abs(perf["base_default_rate"] - 0.1) < 1e-9
+    assert abs(perf["post_model_default_rate"] - (30 / 730)) < 1e-9
+    assert abs(perf["precision"] - 0.25925925925925924) < 1e-9
+
+
+def test_test_performance_from_metadata_derives_tn_tp_from_legacy_metrics() -> None:
+    metadata = {
+        "splits": {"rows": {"test": 61195}},
+        "business": {"threshold": 0.08},
+        "metrics_test": {
+            "fn": 1492.0,
+            "fp": 15816.0,
+            "recall_inadimplente": 0.6979757085020243,
+            "taxa_reprovacao": 0.3147969605359915,
+            "threshold": 0.08,
+        },
+    }
+    perf = test_performance_from_metadata(metadata)
+    assert perf["fn"] == 1492
+    assert perf["fp"] == 15816
+    assert perf["tp"] == 3448
+    assert perf["tn"] == 40439
+    assert perf["tn"] + perf["fp"] + perf["fn"] + perf["tp"] == 61195
+    assert abs(perf["recall"] - 0.6979757085020243) < 1e-12

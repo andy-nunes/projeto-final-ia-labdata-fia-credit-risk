@@ -123,14 +123,17 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       API_BASE_URL: http://api:8000
+      API_BROWSER_BASE_URL: http://localhost:8000
     volumes:
       - .:/app
       - ./Dados:/app/Dados
     ports:
       - "8501:8501"
+    restart: unless-stopped
     command: >
       bash -c "python scripts/ensure_minio_buckets.py &&
-      streamlit run app/dashboard.py --server.address=0.0.0.0 --server.port=8501"
+      streamlit run app/dashboard.py --server.address=0.0.0.0 --server.port=8501
+      --server.fileWatcherType none"
     depends_on:
       - minio
       - api

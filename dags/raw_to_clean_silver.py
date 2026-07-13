@@ -1,7 +1,8 @@
-"""DAG manual com um pipeline Silver isolado por tabela."""
+"""DAG Silver com um pipeline isolado por tabela."""
 
 from datetime import datetime
 
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, get_current_context, task, task_group
 
 from scripts.silver_pipeline import (
@@ -13,7 +14,7 @@ from scripts.silver_transformations import SILVER_TABLES
 
 
 @dag(
-    dag_id="raw_to_clean_silver",
+    dag_id="02_silver_clean_data",
     start_date=datetime(2026, 1, 1),
     schedule=None,
     catchup=False,
@@ -45,10 +46,20 @@ def raw_to_clean_silver():
 
         collected = collect_task(table_id)
         validated = validate_task(collected)
-        write_task(validated)
+        return write_task(validated)
 
-    for table_id in SILVER_TABLES:
+    trigger_gold_pipeline = TriggerDagRunOperator(
+        task_id="trigger_gold_pipeline",
+        trigger_dag_id="03_gold_abt_features",
+        wait_for_completion=False,
+        reset_dag_run=True,
+    )
+
+    write_outputs = [
         silver_table_group.override(group_id=table_id.lower())(table_id)
+        for table_id in SILVER_TABLES
+    ]
+    write_outputs >> trigger_gold_pipeline
 
 
 raw_to_clean_silver()

@@ -298,7 +298,23 @@ def build_metadata(
         },
         "hyperparameters": config.model_params,
         "scale_pos_weight": scale_pos_weight,
-        "metrics_test": {key: metrics[key] for key in ("pr_auc", "roc_auc", "f2", "fn", "fp", "recall_inadimplente", "taxa_reprovacao", "threshold")},
+        "metrics_test": {
+            key: metrics[key]
+            for key in (
+                "pr_auc",
+                "roc_auc",
+                "f2",
+                "tn",
+                "fp",
+                "fn",
+                "tp",
+                "recall_inadimplente",
+                "precision_inadimplente",
+                "taxa_reprovacao",
+                "threshold",
+            )
+        },
+        "confusion_matrix_test": metrics.get("confusion_matrix"),
         "training_seconds": elapsed_seconds,
         "artifacts": {
             "model_path": model_path,

@@ -8,7 +8,7 @@ from scripts.abt_to_model_lightgbm import run_training
 
 
 @dag(
-    dag_id="train_lightgbm",
+    dag_id="04_model_train_lightgbm",
     start_date=datetime(2026, 1, 1),
     schedule=None,
     catchup=False,

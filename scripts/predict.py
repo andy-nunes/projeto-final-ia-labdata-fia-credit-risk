@@ -47,12 +47,27 @@ def get_s3_filesystem() -> s3fs.S3FileSystem:
 
 
 def resolve_local_model_path(config: ModelConfig | None = None) -> Path | None:
-    """Fallback local quando o caminho configurado não está acessível."""
+    """Fallback local quando o caminho configurado (ex.: S3) não está acessível."""
     if config is None:
         config = get_model_config()
+
+    candidates: list[Path] = []
     configured = Path(config.resolve_model_artifact_path())
-    if configured.exists():
-        return configured
+    if not is_s3_path(str(configured)):
+        candidates.append(configured)
+
+    # Sempre tenta o artefato local do repositório, mesmo com MODEL_PATH=s3://...
+    local_rel = config._resolve_path_key("model_artifact_path", "model_artifact")
+    candidates.append(Path(__file__).resolve().parents[1] / local_rel)
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.is_file() and candidate.stat().st_size > 0:
+            return candidate
     return None
 
 
@@ -75,6 +90,7 @@ def load_model() -> Any:
         with open(path, "rb") as handle:
             return pickle.load(handle)
 
+    primary_error: Exception | None = None
     try:
         model_path = get_model_path()
         if is_s3_path(model_path):
@@ -85,11 +101,16 @@ def load_model() -> Any:
         raise ImportError(
             "Falha ao deserializar o modelo. É necessário o pacote lightgbm para carregar o arquivo pickle."
         ) from exc
-    except Exception:
-        local_model_path = resolve_local_model_path()
-        if local_model_path is None:
-            raise
-        return _pickle_load(str(local_model_path))
+    except Exception as exc:
+        primary_error = exc
+
+    local_model_path = resolve_local_model_path()
+    if local_model_path is None:
+        raise FileNotFoundError(
+            f"Modelo indisponível em {get_model_path()} e sem fallback local "
+            "em artifacts/. Re-execute a DAG 04_model_train_lightgbm ou restaure o .pkl."
+        ) from primary_error
+    return _pickle_load(str(local_model_path))
 
 
 def _normalize_category_token(value: Any) -> str:

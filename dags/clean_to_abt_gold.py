@@ -1,7 +1,8 @@
-"""DAG manual e sequencial para construir a ABT da camada Gold."""
+"""DAG Gold sequencial para construir a ABT da camada Gold."""
 
 from datetime import datetime
 
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, get_current_context, task, task_group
 
 from scripts.gold_pipeline import (
@@ -26,7 +27,7 @@ from scripts.gold_pipeline import (
 
 
 @dag(
-    dag_id="clean_to_abt_gold",
+    dag_id="03_gold_abt_features",
     start_date=datetime(2026, 1, 1),
     schedule=None,
     catchup=False,
@@ -164,13 +165,21 @@ def clean_to_abt_gold():
 
         return write_task(validate_task(build_task(gate)))
 
+    trigger_model_training = TriggerDagRunOperator(
+        task_id="trigger_model_training",
+        trigger_dag_id="04_model_train_lightgbm",
+        wait_for_completion=False,
+        reset_dag_run=True,
+    )
+
     application = application_group()
     bureau = bureau_group(application)
     pos = pos_group(bureau)
     card = credit_card_group(pos)
     previous = previous_group(card)
     installments = installments_group(previous)
-    final_group(installments)
+    abt = final_group(installments)
+    abt >> trigger_model_training
 
 
 clean_to_abt_gold()
