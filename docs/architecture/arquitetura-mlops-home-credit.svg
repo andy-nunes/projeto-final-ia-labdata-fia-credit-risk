@@ -63,7 +63,7 @@
   <text class="box-title" x="127" y="563">Airflow DAG</text>
   <text class="box-text" x="127" y="586">02_silver_clean_data</text>
   <rect class="etl" x="500" y="535" width="300" height="72"/>
-  <text class="box-title" x="522" y="563">Silver Pipeline</text>
+  <text class="box-title" x="522" y="563">data_sanitization.py</text>
   <text class="box-text" x="522" y="586">limpeza, QA e staging</text>
   <rect class="minio" x="915" y="535" width="255" height="72"/>
   <text class="box-title" x="937" y="563">Bucket clean</text>
@@ -75,7 +75,7 @@
   <text class="box-title" x="127" y="673">Airflow DAG</text>
   <text class="box-text" x="127" y="696">03_gold_abt_features</text>
   <rect class="etl" x="500" y="645" width="300" height="72"/>
-  <text class="box-title" x="522" y="673">Gold Pipeline</text>
+  <text class="box-title" x="522" y="673">abt_transform.py</text>
   <text class="box-text" x="522" y="696">agregacoes e features</text>
   <rect class="minio" x="915" y="645" width="255" height="72"/>
   <text class="box-title" x="937" y="673">Bucket abt</text>
