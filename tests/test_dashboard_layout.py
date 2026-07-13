@@ -6,12 +6,23 @@ import pytest
 
 
 DASHBOARD_PATH = Path(__file__).resolve().parents[1] / "app" / "dashboard.py"
+UI_DIR = Path(__file__).resolve().parents[1] / "app" / "ui"
 PAGES_DIR = Path(__file__).resolve().parents[1] / "app" / "pages"
 CATALOG_MODULE_PATH = (
     Path(__file__).resolve().parents[1] / "app" / "abt_catalog.py"
 )
 if not DASHBOARD_PATH.exists():
     pytest.skip("O container atual nao monta app/dashboard.py.", allow_module_level=True)
+
+
+def _dashboard_sources() -> str:
+    """Concatena dashboard.py e app/ui/*.py para asserts estruturais."""
+    parts = [DASHBOARD_PATH.read_text(encoding="utf-8")]
+    if UI_DIR.is_dir():
+        for path in sorted(UI_DIR.glob("*.py")):
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
 
 pytest.importorskip("streamlit")
 
@@ -293,7 +304,7 @@ def test_dashboard_renders_project_copy_without_student_footer() -> None:
 
 def test_dashboard_catalog_navigation_does_not_use_page_link_registry() -> None:
     """Verifica navegacao in-app do catalogo via abas sem registry multipage."""
-    source = DASHBOARD_PATH.read_text(encoding="utf-8")
+    source = _dashboard_sources()
 
     assert "st.page_link" not in source
     assert "st.switch_page" not in source

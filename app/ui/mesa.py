@@ -1,0 +1,364 @@
+"""Aba Mesa de Crédito: dossiê, What-If e escoragem."""
+
+from __future__ import annotations
+
+import json
+import math
+from typing import Any
+
+import pandas as pd
+import streamlit as st
+
+from app.abt_catalog import render_catalog
+from app.ui.api import _parse_http_error, api_get_client, api_post_score
+from app.ui.components import (
+    _build_audit_message,
+    _build_score_stat_cards,
+    _render_factor_row_html,
+    _render_override_item_html,
+    _render_stat_card_html,
+)
+from app.ui.constants import (
+    COMPLIANCE_404_MSG,
+    FEATURE_TRANSLATIONS,
+    ID_COLUMN,
+    READONLY_FEATURES_DISPLAY_ORDER,
+    READONLY_FEATURES_HIDDEN,
+    TARGET_COLUMN,
+    _CONFIG,
+)
+from app.ui.features import _render_editable_feature, _render_readonly_feature
+from app.ui.formatting import _get_label, _is_approved
+from app.ui.session import (
+    _clear_client_view_flags,
+    _clear_dashboard_state,
+    _clear_edit_widget_keys,
+    _collect_overrides_from_session,
+    _ensure_edit_widget_seeds,
+    _seed_edit_widgets_from_features,
+)
+
+def _load_client_dossier(client_id_query: int) -> None:
+    """Consulta API e persiste dossiê + seeds dos widgets What-If."""
+    response = api_get_client(client_id_query)
+    features_dict = response.get("features") or {}
+    if not features_dict:
+        st.error(f"Cliente {client_id_query} retornou dossiê vazio na API.")
+        return
+
+    previous_id = st.session_state.get("client_id")
+    if previous_id != client_id_query:
+        _clear_edit_widget_keys(previous_id)
+    _clear_edit_widget_keys(client_id_query)
+
+    st.session_state.client_features = features_dict
+    st.session_state.client_id = client_id_query
+    st.session_state.score_result = None
+    _clear_client_view_flags()
+    _seed_edit_widgets_from_features(features_dict, client_id_query)
+    st.success(f"Cliente {client_id_query} localizado na base do Bureau.")
+
+def _run_credit_score(features: dict[str, Any]) -> None:
+    """Executa escoragem usando valores commitados pelo form de simulação."""
+    client_id = int(st.session_state.client_id)
+    overrides = _collect_overrides_from_session(client_id, features)
+    st.session_state.score_result = api_post_score(client_id, overrides)
+    st.session_state.score_json_ready = False
+
+def _render_score_result(
+    features: dict[str, Any],
+    client_id: int,
+    result: dict[str, Any],
+) -> None:
+    """Renderiza o parecer, cards, fatores e auditoria da última escoragem."""
+    st.markdown(
+        """
+        <div class="section-band">
+            <div class="section-kicker">Resultado</div>
+            <div class="section-title">Escoragem de crédito</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    approved = _is_approved(result)
+    box_class = "approved-box" if approved else "rejected-box"
+
+    st.markdown(
+        f'<div class="{box_class}"><h3>'
+        f'{"✓ Parecer favorável" if approved else "✗ Parecer desfavorável"}'
+        f"</h3></div>",
+        unsafe_allow_html=True,
+    )
+
+    stat_cards = _build_score_stat_cards(result, client_id)
+    st.markdown(
+        f'<div class="stat-grid">{"".join(stat_cards)}</div>',
+        unsafe_allow_html=True,
+    )
+
+    applied_overrides = result.get("applied_overrides") or {}
+    with st.expander("Simulação aplicada"):
+        if applied_overrides:
+            override_items = [
+                _render_override_item_html(feature_name, values)
+                for feature_name, values in applied_overrides.items()
+            ]
+            st.markdown(
+                f'<div class="override-list">{"".join(override_items)}</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.write(
+                "Nenhuma alteração aplicada; escoragem feita com o dossiê original."
+            )
+
+    if approved:
+        st.markdown("#### Fatores Determinantes para Aprovação")
+        factors = result.get("top_positive_factors") or []
+        empty_msg = "Nenhum fator positivo identificado."
+        factor_tone = "success"
+    else:
+        st.markdown("#### Motivos da Reprovação (Fatores de Risco)")
+        factors = result.get("top_risk_factors") or []
+        empty_msg = "Nenhum fator de risco identificado."
+        factor_tone = "danger"
+
+    if factors:
+        factor_rows = []
+        for feature_name, impact_pct in factors:
+            tech_name = str(feature_name)
+            business_label = FEATURE_TRANSLATIONS.get(tech_name, tech_name)
+            factor_rows.append(
+                _render_factor_row_html(
+                    business_label,
+                    tech_name,
+                    float(impact_pct),
+                    tone=factor_tone,
+                )
+            )
+        st.markdown(
+            f'<div class="factor-list">{"".join(factor_rows)}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.caption(empty_msg)
+
+    target_raw = features.get(TARGET_COLUMN)
+    if target_raw is not None:
+        try:
+            if isinstance(target_raw, float) and math.isnan(target_raw):
+                target_raw = None
+        except Exception:
+            pass
+
+    if target_raw is not None:
+        target = int(target_raw)
+        prediction = result.get("prediction")
+
+        st.markdown("#### Auditoria do Modelo (Holdout)")
+
+        audit_tone, audit_message = _build_audit_message(
+            int(prediction),
+            target,
+            has_overrides=bool(applied_overrides),
+        )
+        if audit_tone == "success":
+            st.success(audit_message)
+        elif audit_tone == "error":
+            st.error(audit_message)
+        else:
+            st.warning(audit_message)
+
+    with st.expander("Output - JSON"):
+        if st.session_state.get("score_json_ready"):
+            st.json(result)
+        elif st.button(
+            "Mostrar JSON da escoragem",
+            key="btn_show_score_json",
+            use_container_width=True,
+        ):
+            st.session_state.score_json_ready = True
+            st.json(result)
+        else:
+            st.caption(
+                "O JSON completo só é montado sob demanda para não pesar o rerun."
+            )
+
+def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
+    """Dossiê interativo: What-If em form evita rerun a cada tecla/select."""
+    _ensure_edit_widget_seeds(features, client_id)
+
+    st.markdown(
+        '<div style="border-left: 4px solid #2563eb; padding-left: 10px; '
+        'margin-bottom: 15px;"><h5 style="margin: 0;">Dados atualizados '
+        "para simulação</h5></div>",
+        unsafe_allow_html=True,
+    )
+    with st.form("form_whatif_score", clear_on_submit=False):
+        editable_features = list(_CONFIG.editable_features)
+        for row_start in range(0, len(editable_features), 3):
+            row_features = editable_features[row_start : row_start + 3]
+            cols = st.columns(3)
+            for col, feature_name in zip(cols, row_features):
+                with col:
+                    _render_editable_feature(features, feature_name, client_id)
+
+        st.markdown('<div class="score-action">', unsafe_allow_html=True)
+        st.markdown('<div class="score-btn">', unsafe_allow_html=True)
+        run_score = st.form_submit_button(
+            "Rodar Escoragem de Crédito",
+            type="primary",
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    if run_score:
+        try:
+            _run_credit_score(features)
+        except ValueError as exc:
+            st.error(str(exc))
+        except ConnectionError as exc:
+            st.error(str(exc))
+        except RuntimeError as exc:
+            status, _ = _parse_http_error(exc)
+            if status == 404:
+                st.error(COMPLIANCE_404_MSG)
+            else:
+                st.error(f"Falha na escoragem (HTTP {status}): {exc}")
+
+    st.markdown(
+        '<div style="border-left: 4px solid #64748b; padding-left: 10px; '
+        'margin-bottom: 15px;"><h5 style="margin: 0;">Dados fixos do '
+        "cliente</h5></div>",
+        unsafe_allow_html=True,
+    )
+    readonly_features = [
+        col_name
+        for col_name in READONLY_FEATURES_DISPLAY_ORDER
+        if col_name not in READONLY_FEATURES_HIDDEN
+        and col_name in _CONFIG.readonly_features
+    ]
+    for row_start in range(0, len(readonly_features), 3):
+        row_features = readonly_features[row_start : row_start + 3]
+        cols = st.columns(3)
+        for col, col_name in zip(cols, row_features):
+            with col:
+                _render_readonly_feature(col_name, features.get(col_name))
+
+    if st.button(
+        "Carregar dossiê completo (todas as variáveis da ABT)",
+        key="btn_load_dossier_table",
+        use_container_width=True,
+        disabled=bool(st.session_state.get("dossier_table_ready")),
+    ):
+        st.session_state.dossier_table_ready = True
+
+    if st.session_state.get("dossier_table_ready"):
+        with st.expander(
+            "Ver dossiê completo (todas as variáveis da ABT)",
+            expanded=True,
+        ):
+            dossier_rows = [
+                {
+                    "Variável": FEATURE_TRANSLATIONS.get(col_name, col_name),
+                    "Campo": col_name,
+                    "Valor": _format_readonly_value(col_name, value),
+                }
+                for col_name, value in features.items()
+            ]
+            st.dataframe(
+                pd.DataFrame(dossier_rows),
+                use_container_width=True,
+                hide_index=True,
+            )
+    else:
+        st.caption(
+            "O dossiê completo da ABT só é montado sob demanda para não "
+            "pesar cada interação da mesa."
+        )
+
+    result = st.session_state.score_result
+    if result:
+        _render_score_result(features, client_id, result)
+
+def _render_mesa_tab() -> None:
+    busca_col, limpar_col = st.columns([5, 1], vertical_alignment="bottom")
+    with busca_col:
+        with st.form("form_busca_cliente", clear_on_submit=False):
+            busca_inner1, busca_inner2 = st.columns([3, 1], vertical_alignment="bottom")
+            with busca_inner1:
+                sk_id_input = st.text_input(
+                    ID_COLUMN,
+                    key="sk_id_input",
+                    help=(
+                        "Identificador do cliente na base do Bureau / "
+                        "holdout de demonstração."
+                    ),
+                )
+            with busca_inner2:
+                consultar = st.form_submit_button(
+                    "Consultar Cliente",
+                    type="primary",
+                    use_container_width=True,
+                )
+    with limpar_col:
+        st.button(
+            "Limpar",
+            use_container_width=True,
+            on_click=_clear_dashboard_state,
+            key="btn_limpar",
+        )
+
+    if consultar:
+        sk_id_text = str(sk_id_input or "").strip()
+        if not sk_id_text.isdigit() or int(sk_id_text) < 1:
+            # Não apaga dossiê já carregado quando a consulta é inválida.
+            st.error(f"Informe um {ID_COLUMN} inteiro positivo.")
+        else:
+            try:
+                _load_client_dossier(int(sk_id_text))
+            except ConnectionError as exc:
+                st.error(str(exc))
+            except RuntimeError as exc:
+                status, _ = _parse_http_error(exc)
+                if status == 404:
+                    st.error(COMPLIANCE_404_MSG)
+                else:
+                    st.error(f"Falha ao consultar cliente (HTTP {status}): {exc}")
+
+    features = st.session_state.client_features
+    if features:
+        client_id = int(st.session_state.client_id)
+        st.markdown(f"### Cliente *{client_id}*")
+        _render_client_workspace(features, client_id)
+    else:
+        st.info(
+            f"Informe um **{ID_COLUMN}** válido e clique em **Consultar Cliente** "
+            "para carregar o dossiê a partir da API."
+        )
+
+def _render_catalog_tab() -> None:
+    """Catálogo sob demanda: markdown grande não roda a cada rerun da mesa."""
+    if not st.session_state.get("catalog_ready"):
+        st.title("Variáveis da Análise de Risco")
+        st.caption(
+            "Dicionário de fatores do motor de decisão. Carregue sob demanda "
+            "para não pesar a Mesa de Crédito."
+        )
+        if st.button(
+            "Carregar dicionário de variáveis",
+            type="secondary",
+            key="btn_load_catalog",
+        ):
+            st.session_state.catalog_ready = True
+        else:
+            st.info(
+                "O dicionário monta o markdown de todas as variáveis da ABT. "
+                "Carregue quando for consultar as descrições de negócio."
+            )
+            return
+
+    render_catalog(show_back_link=True)
+
