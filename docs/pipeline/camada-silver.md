@@ -3,8 +3,9 @@
 ## Visao geral
 
 A camada Silver foi consolidada na DAG manual `02_silver_clean_data`. Ela le os
-oito CSVs de negocio no bucket `raw`, aplica as transformacoes derivadas do
-notebook `HMDR_Camada_Silver.ipynb`, valida o resultado intermediario e publica
+oito CSVs de negocio no bucket `raw`, aplica as transformacoes implementadas em
+`scripts/data_sanitization.py` (com regras em `scripts/silver_transformations.py`
+e `scripts/silver_validations.py`), valida o resultado intermediario e publica
 no bucket `clean` somente os Parquets aprovados.
 
 A implementacao foi separada por responsabilidade:
@@ -12,7 +13,8 @@ A implementacao foi separada por responsabilidade:
 - `dags/02_silver_clean_data.py`: apenas orquestracao Airflow.
 - `scripts/silver_transformations.py`: regras de transformacao e configuracao
   das oito tabelas.
-- `scripts/silver_validations.py`: regras de QA e logs no formato do notebook.
+- `scripts/silver_validations.py`: regras de QA e logs no formato `[PASS]` /
+  `[WARNING]` / `[FAIL]`.
 - `scripts/data_sanitization.py`: staging, validacao, upload, limpeza e execucao
   direta pela CLI.
 

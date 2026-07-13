@@ -2,8 +2,10 @@
 
 ## Objetivo
 
-Processar e validar os oito CSVs descritos em `HMDR_Camada_Silver.ipynb`,
-publicando no bucket `clean` somente Parquets aprovados.
+Processar e validar os oito CSVs da competicao Home Credit, conforme
+`scripts/data_sanitization.py` e as regras em `scripts/silver_transformations.py`
+/ `scripts/silver_validations.py`, publicando no bucket `clean` somente Parquets
+aprovados.
 
 ## Configuração
 

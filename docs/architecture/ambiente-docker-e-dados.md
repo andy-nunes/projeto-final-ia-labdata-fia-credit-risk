@@ -491,15 +491,15 @@ Resultado relevante:
 
 A DAG manual `02_silver_clean_data` lê oito CSVs do bucket `raw` e cria oito
 TaskGroups independentes. Cada grupo coleta e processa no staging, valida com as
-regras de `HMDR_Camada_Silver.ipynb` e só então publica no bucket `clean`.
+regras de `scripts/silver_validations.py` e só então publica no bucket `clean`.
 O fluxo operacional fica em `scripts/data_sanitization.py`; regras puras ficam em
 `scripts/silver_transformations.py` e `scripts/silver_validations.py`.
 O processamento de `bureau_balance` usa chunks e escrita incremental Parquet
 para não carregar seus 27,3 milhões de linhas simultaneamente na memória.
 
-Os logs de QA usam `[PASS]`, `[WARNING]` e `[FAIL]`. Warnings seguem a lógica do
-notebook e não reprovam tasks. Falhas preservam o Parquet intermediário; uploads
-bem-sucedidos removem o staging da tabela.
+Os logs de QA usam `[PASS]`, `[WARNING]` e `[FAIL]`. Warnings não reprovam
+tasks. Falhas preservam o Parquet intermediário; uploads bem-sucedidos removem o
+staging da tabela.
 
 Consulte [`docs/pipeline/camada-silver.md`](../pipeline/camada-silver.md) para a arquitetura completa,
 semantica de falhas, execucao pela CLI e testes pytest.
