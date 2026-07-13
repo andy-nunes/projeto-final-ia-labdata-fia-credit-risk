@@ -4,7 +4,7 @@ Data da ultima atualizacao: 2026-06-29
 
 ## Contexto do Projeto
 
-O PDF `ProjetoFinal_v2.pdf` descreve um projeto final de Machine Learning/IA
+O PDF `docs/reference/ProjetoFinal_v2.pdf` descreve um projeto final de Machine Learning/IA
 baseado no ciclo CRISP-DM. O desafio escolhido neste repositorio e Credit Risk,
 usando a competicao Kaggle Home Credit Default Risk.
 
@@ -349,8 +349,7 @@ homepage oficial do painel da mesa de credito.
 O painel apresenta o motor de decisao de credito com dados Home Credit, modelo
 LightGBM e API de escoragem.
 
-A homepage tem um link para a pagina `app/pages/catalogo_abt.py`. Essa pagina
-exibe um catalogo pesquisavel das colunas da ABT com nome, tipo, categoria,
+A aba **Catalogo** em `app/dashboard.py` exibe um catalogo pesquisavel das colunas da ABT com nome, tipo, categoria,
 fonte, descricao, marcacao de entrada no modelo, marcacao de campo editavel e
 marcacao de categorica do modelo. A montagem fica em `app/abt_catalog.py`,
 usando o schema de `Dados/abt/abt_train.parquet`, o arquivo
