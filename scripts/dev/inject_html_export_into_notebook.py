@@ -1,4 +1,4 @@
-"""Injeta outputs de export HTML JupyterLab em um notebook .ipynb."""
+"""Injeta outputs de um export HTML do JupyterLab em um notebook .ipynb."""
 
 from __future__ import annotations
 
@@ -376,10 +376,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 def main() -> None:
     if len(sys.argv) < 2:
         print(
-            'Uso: python scripts/dev/html_outputs_to_ipynb.py <export.html> '
+            'Uso: python scripts/dev/inject_html_export_into_notebook.py <export.html> '
             '[notebook.ipynb]\n'
             'Exemplo:\n'
-            '  python scripts/dev/html_outputs_to_ipynb.py export.html '
+            '  python scripts/dev/inject_html_export_into_notebook.py export.html '
             'notebooks/02_model_evaluation.ipynb'
         )
         raise SystemExit(1)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Executa o notebook de seleção de modelo e grava outputs no .ipynb.
+# Reexecuta o notebook de avaliação/comparação de modelos e grava os outputs no .ipynb.
 # Requer Docker Desktop em execução.
 set -euo pipefail
 

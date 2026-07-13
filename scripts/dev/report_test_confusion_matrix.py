@@ -1,4 +1,4 @@
-"""Matriz de confusão oficial no split de teste (threshold de negócio).
+"""Relatório da matriz de confusão no split de teste (threshold de negócio).
 
 Usa o mesmo particionamento de 3 vias do treino (`split_abt_three_way`),
 para o resultado bater com `artifacts/model_metadata.json`.
