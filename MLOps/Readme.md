@@ -258,13 +258,34 @@ curl -sS -X POST http://localhost:8000/score \
 docker compose run --rm minio-client cat local/artifacts/automation/latest.json
 ```
 
-### Proposta técnica (roadmap)
+### CredIA (implementado)
 
-- Agentes de IA/LLM para gerar parecer em linguagem natural, explicações
-  contextualizadas e apoio ao analista de crédito.
-- Consumo dos eventos já publicados em `s3://artifacts/automation/` como trilha
-  de auditoria e gatilho de contexto.
-- Continuidade do princípio de governança: **humano no loop** para decisão final.
+| Peça | Caminho |
+|---|---|
+| Módulo de IA | `app/ai_commentary.py` |
+| Endpoint dedicado | `POST /score/ai-commentary` |
+| Integração UI | `app/ui/mesa.py` (botão `Gerar parecer CredIA`) |
+| Card visual | `app/ui/components.py` + `app/ui/styles.py` |
+
+Comportamento em produção:
+
+- A escoragem `/score` não depende do LLM para manter latência da mesa.
+- O parecer é gerado sob demanda após a escoragem, sem rerodar o modelo.
+- O contexto do CredIA combina:
+  - saída técnica da run (`probability`, `threshold`, fatores locais);
+  - benchmarks da carteira (holdout de demo);
+  - highlights da EDA (`notebooks/01_exp_analysis.ipynb`);
+  - dicionário técnico→negócio para linguagem executiva.
+- Se houver indisponibilidade do Gemini, o card informa status/erro técnico e
+  mantém a decisão humana obrigatória.
+
+Configuração:
+
+```bash
+GEMINI_API_KEY=<sua-chave>
+GEMINI_MODEL=gemini-flash-lite-latest
+GEMINI_MODEL_FALLBACKS=gemini-2.0-flash-lite,gemini-2.5-flash-lite
+```
 
 ---
 

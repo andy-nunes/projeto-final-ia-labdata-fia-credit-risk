@@ -110,6 +110,8 @@ services:
       DEMO_HOLDOUT_PATH: s3://abt/abt_demo_holdout.parquet
       MODEL_PATH: s3://artifacts/lightgbm_hcdr.pkl
       MODEL_METADATA_PATH: s3://artifacts/model_metadata.json
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     volumes:
       - .:/app
       - ./Dados:/app/Dados

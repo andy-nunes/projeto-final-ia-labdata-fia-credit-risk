@@ -198,6 +198,14 @@ curl -sS -X POST http://localhost:8000/score \
   -d '{"client_id":139767,"features_override":{}}'
 ```
 
+Gerar parecer **CredIA** sob demanda (sem rerodar a escoragem):
+
+```bash
+curl -sS -X POST http://localhost:8000/score/ai-commentary \
+  -H 'Content-Type: application/json' \
+  -d '{"score_payload":{"sk_id_curr":139767,"probability":0.0453,"prediction":0,"threshold":0.08,"risk_band":"Risco moderado","label":"Aprovado (Pagador Saudável)","top_risk_factors":[["CC_UTILIZATION_MAX",18.0]],"top_positive_factors":[["NAME_EDUCATION_TYPE",7.0]],"applied_overrides":{},"input":{"EXT_SOURCE_MEAN":0.55}}}'
+```
+
 Execute uma simulação What-If com override de features:
 
 ```bash
@@ -215,21 +223,42 @@ docker compose up -d streamlit
 Acesse `http://localhost:8501`. O dashboard consome a API internamente via
 `API_BASE_URL=http://api:8000`.
 
+### Configuração do CredIA (Gemini)
+
+No `.env` da raiz:
+
+```bash
+GEMINI_API_KEY=<sua-chave>
+GEMINI_MODEL=gemini-flash-lite-latest
+GEMINI_MODEL_FALLBACKS=gemini-2.0-flash-lite,gemini-2.5-flash-lite
+```
+
+Observações operacionais:
+
+- A escoragem (`/score`) roda com baixa latência e **não bloqueia** na IA.
+- O parecer é gerado sob demanda via botão `Gerar parecer CredIA` na Mesa.
+- O CredIA usa contexto da run (`/score`), benchmarks da carteira (holdout) e
+  highlights do notebook `notebooks/01_exp_analysis.ipynb`.
+- Se o Gemini estiver indisponível (ex.: pico de demanda), o card exibe
+  indisponibilidade com detalhe técnico e mantém humano no loop.
+
 ## Próximos passos de desenvolvimento
 
-Os itens **iii** (monitoramento) e **iv** (automação) possuem implementação
-operacional:
+Os itens **iii** (monitoramento) e **iv** (automação + agente de apoio) possuem
+implementação operacional:
 
 - Monitoramento: DAG `05_monitor_health` / `POST /monitoring/run` →
   `s3://artifacts/monitoring/latest.json` (saúde, artefatos, PSI/drift, schema, baseline)
 - Automação: triagem pós-`/score` e `POST /webhooks/credit-decision` →
   `s3://artifacts/automation/`
+- CredIA: `POST /score/ai-commentary` + bloco visual na Mesa de Crédito para
+  insights e checklist ao gerente
 
 Detalhes em [`MLOps/Readme.md`](MLOps/Readme.md) e na documentação
 [`docs/architecture/mlops-monitoramento-e-automacao.md`](docs/architecture/mlops-monitoramento-e-automacao.md).
 
-Evoluções futuras (agentes de IA para pareceres em linguagem natural, jobs
-agendados de PSI em janela viva) permanecem no roadmap, sempre com humano no loop.
+Evoluções futuras (alertas contínuos de drift em janela viva, experimentos com
+modelos multimodais) permanecem no roadmap, sempre com humano no loop.
 
 
 ## Documentação

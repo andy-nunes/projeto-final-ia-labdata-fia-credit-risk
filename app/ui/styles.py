@@ -75,6 +75,12 @@ _PAGE_STYLE = """
         min-height: 2.75rem;
         font-weight: 700 !important;
     }
+    div[data-testid="stButton"] button[kind="primary"] {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+        color: #ffffff !important;
+        border: 1px solid #6366f1 !important;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.22) !important;
+    }
     .score-btn button {
         background: #2563eb !important;
         color: white !important;
@@ -83,6 +89,21 @@ _PAGE_STYLE = """
     }
     .score-action {
         margin-top: 1rem;
+    }
+    .credia-action {
+        margin-top: 0.4rem;
+        margin-bottom: 0.35rem;
+    }
+    .credia-btn button {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+        color: #ffffff !important;
+        border: 1px solid #6366f1 !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.22) !important;
+    }
+    .credia-btn button:hover {
+        filter: brightness(1.03);
+        border-color: #4f46e5 !important;
     }
     .approved-box {
         background: rgba(22, 163, 74, 0.08);
@@ -154,6 +175,76 @@ _PAGE_STYLE = """
         font-size: 0.78rem;
         color: #64748b;
         word-break: break-all;
+    }
+    .ai-card {
+        border-radius: 8px;
+        padding: 1rem 1.15rem;
+        margin: 0.85rem 0 0.9rem 0;
+        border: 1px solid #bfdbfe;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.10), rgba(139, 92, 246, 0.10));
+    }
+    .ai-kicker {
+        font-size: 0.95rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-transform: none;
+        color: #1d4ed8;
+        margin: 0 0 0.3rem 0;
+    }
+    .ai-title {
+        font-size: 1.12rem;
+        font-weight: 700;
+        margin: 0 0 0.48rem 0;
+        color: #312e81;
+    }
+    .ai-line {
+        margin: 0.28rem 0;
+        color: #0f172a;
+        font-size: 0.91rem;
+        line-height: 1.45;
+    }
+    .ai-guardrail {
+        margin: 0.52rem 0 0.35rem 0;
+        color: #0f766e;
+        font-size: 0.82rem;
+        font-weight: 600;
+    }
+    .ai-alerts {
+        margin: 0.2rem 0 0 1.1rem;
+        color: #334155;
+        font-size: 0.88rem;
+        line-height: 1.35;
+    }
+    .ai-subtitle {
+        margin: 0.55rem 0 0.25rem 0;
+        color: #312e81;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+    .ai-brief {
+        margin-top: 0.5rem;
+        border: 1px solid #c7d2fe;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.65);
+        padding: 0.6rem 0.75rem;
+    }
+    .ai-md-heading {
+        margin: 0.2rem 0 0.4rem 0;
+        color: #1e1b4b;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+    .ai-md-paragraph {
+        margin: 0.22rem 0;
+        color: #0f172a;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+    .ai-md-list {
+        margin: 0.25rem 0 0.4rem 1rem;
+        color: #1e293b;
+        font-size: 0.88rem;
+        line-height: 1.4;
     }
     .feature-label {
         margin: 0 0 0.4rem 0;
