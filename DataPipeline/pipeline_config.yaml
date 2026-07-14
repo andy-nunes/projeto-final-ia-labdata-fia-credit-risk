@@ -1,0 +1,71 @@
+# Configuração central do Data Pipeline (Silver + Gold).
+# Consumido como referência; variáveis de ambiente no docker-compose sobrescrevem em runtime.
+
+project:
+  name: home-credit-default-risk
+  data_dir: Dados  # staging temporário local (não é fonte oficial do lake)
+
+minio:
+  endpoint_url: http://minio:9000
+  key: minioadmin
+  secret: minioadmin
+
+buckets:
+  raw: raw
+  clean: clean
+  abt: abt
+  artifacts: artifacts
+
+silver:
+  # Mapeamento tabela → chaves no lake (detalhes em scripts/silver_transformations.py)
+  tables:
+    application_train:
+      raw_key: application_train.csv
+      clean_key: application_train_silver.parquet
+    application_test:
+      raw_key: application_test.csv
+      clean_key: application_test_silver.parquet
+    bureau:
+      raw_key: bureau.csv
+      clean_key: bureau_silver.parquet
+    bureau_balance:
+      raw_key: bureau_balance.csv
+      clean_key: bureau_balance_silver.parquet
+    POS_CASH_balance:
+      raw_key: POS_CASH_balance.csv
+      clean_key: POS_CASH_balance_silver.parquet
+    credit_card_balance:
+      raw_key: credit_card_balance.csv
+      clean_key: credit_card_balance_silver.parquet
+    previous_application:
+      raw_key: previous_application.csv
+      clean_key: previous_application_silver.parquet
+    installments_payments:
+      raw_key: installments_payments.csv
+      clean_key: installments_payments_silver.parquet
+
+gold:
+  abt_key: abt_train.parquet
+  demo_holdout_key: abt_demo_holdout.parquet
+  clean_inputs:
+    application: application_train_silver.parquet
+    bureau: bureau_silver.parquet
+    bureau_balance: bureau_balance_silver.parquet
+    pos_cash: POS_CASH_balance_silver.parquet
+    credit_card: credit_card_balance_silver.parquet
+    previous_application: previous_application_silver.parquet
+    installments: installments_payments_silver.parquet
+
+monitoring:
+  # Features monitoradas para data drift (PSI) no script mlops_monitoring.py
+  drift_features_numeric:
+    - EXT_SOURCE_1
+    - EXT_SOURCE_2
+    - EXT_SOURCE_3
+    - AMT_CREDIT
+    - AMT_ANNUITY
+  drift_features_categorical:
+    - NAME_INCOME_TYPE
+  psi_warn: 0.10
+  psi_fail: 0.25
+  sample_size: 5000

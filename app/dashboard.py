@@ -80,13 +80,13 @@ from app.ui.mesa import (
     _render_score_result,
     _run_credit_score,
 )
+from app.ui.monitoring import _render_monitoring_tab
 from app.ui.performance import (
     _aggregate_profile_risk,
     _build_segment_rankings_cache,
     _get_holdout_risk_scores,
     _get_model_test_performance,
     _load_holdout_risk_scores,
-    _local_file_fingerprint,
     _ranking_to_display,
     _render_confusion_matrix,
     _render_performance_tab,
@@ -108,22 +108,26 @@ def main() -> None:
     _configure_page()
     _init_session_state()
 
-    st.title("Credit Risk Desk — Home Credit")
+    st.title("Motor de Decisão de Crédito — Home Credit")
     st.caption(
-        "Motor de decisão de crédito com dados Home Credit, modelo LightGBM "
-        "e API de escoragem"
+        "Aplicação de apoio à decisão para concessão de crédito, com modelo "
+        "LightGBM e arquitetura MLOps (Airflow + MinIO + FastAPI + Streamlit)."
     )
     st.caption(
-        "Consulte as variáveis da análise de risco para entender os fatores "
-        "do motor de decisão."
+        "Autoria: Anderson Nunes"
+    )
+    st.caption(
+        "Navegue pelas abas para consultar clientes, simular cenários, avaliar "
+        "performance/ROI e acompanhar o monitoramento operacional."
     )
 
-    # Navegacao por abas da mesa de credito, catalogo e performance do modelo.
-    tab_mesa, tab_catalogo, tab_performance = st.tabs(
+    # Navegacao por abas da mesa de credito, catalogo, performance e MLOps.
+    tab_mesa, tab_catalogo, tab_performance, tab_monitoring = st.tabs(
         [
-            "🏦 Mesa de Crédito",
-            "📖 Variáveis da Análise de Risco",
-            "📈 Performance & ROI do Modelo",
+            "Mesa de Crédito",
+            "Dicionário de Variáveis",
+            "Performance e ROI",
+            "Monitoramento MLOps",
         ]
     )
 
@@ -135,6 +139,9 @@ def main() -> None:
 
     with tab_performance:
         _render_performance_tab()
+
+    with tab_monitoring:
+        _render_monitoring_tab()
 
 
 if __name__ == "__main__":

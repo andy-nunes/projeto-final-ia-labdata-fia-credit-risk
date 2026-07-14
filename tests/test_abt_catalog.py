@@ -5,6 +5,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+pytestmark = pytest.mark.streamlit
+
 CATALOG_MODULE_PATH = (
     Path(__file__).resolve().parents[1] / "app" / "abt_catalog.py"
 )
@@ -13,6 +15,8 @@ if not CATALOG_MODULE_PATH.exists():
         "O container atual nao monta app/abt_catalog.py.",
         allow_module_level=True,
     )
+
+pytest.importorskip("streamlit")
 
 from app.abt_catalog import (
     BUSINESS_DESCRIPTIONS,

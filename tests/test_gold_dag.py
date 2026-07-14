@@ -3,8 +3,12 @@
 from pathlib import Path
 
 import pytest
+
+pytest.importorskip("airflow")
+
 from airflow.models import DagBag
 
+pytestmark = pytest.mark.airflow
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DAGS_DIR = PROJECT_ROOT / "dags"

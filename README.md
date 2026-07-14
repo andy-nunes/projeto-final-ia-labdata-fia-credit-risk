@@ -1,31 +1,35 @@
-# Home Credit Default Risk - Motor de Decisao de Credito
+# Home Credit Default Risk - Motor de Decisão de Crédito
 
-Projeto final de MLOps para risco de credito, baseado na competicao Kaggle
-Home Credit Default Risk. A solucao implementa uma esteira completa para
+Projeto final de MLOps para risco de crédito, baseado na competição Kaggle
+Home Credit Default Risk. A solução implementa uma esteira completa para
 baixar dados brutos, transformar bases transacionais em uma ABT de modelagem,
-treinar um modelo LightGBM e disponibilizar um servico de predicao consumido por
-um dashboard de simulacao para a mesa de credito.
+treinar um modelo LightGBM e disponibilizar um serviço de predição consumido por
+um dashboard de simulação para a mesa de crédito.
 
-## Objetivo De Negocio
+**Entrega individual (MLOps):** arquitetura, Docker Compose, monitoramento (iii)
+e automação com agentes (iv) estão documentados em
+[`MLOps/Readme.md`](MLOps/Readme.md).
 
-O projeto apoia a decisao de concessao de credito em um contexto no qual os
-erros sao assimetricos. Recusar um bom pagador reduz receita e oportunidade
-comercial; aprovar um cliente que inadimplira pode gerar perda direta de
-credito, custo de cobranca, provisao e deterioracao da carteira.
+## Objetivo de negócio
 
-Por isso, a modelagem prioriza a reducao de falsos negativos: clientes
+O projeto apoia a decisão de concessão de crédito em um contexto no qual os
+erros são assimétricos. Recusar um bom pagador reduz receita e oportunidade
+comercial; aprovar um cliente que inadimplirá pode gerar perda direta de
+crédito, custo de cobrança, provisão e deterioração da carteira.
+
+Por isso, a modelagem prioriza a redução de falsos negativos: clientes
 historicamente inadimplentes que seriam aprovados pelo motor. A solucao busca
-combinar inclusao, criterio de risco e explicabilidade para permitir aprovar
-melhor, recusar com mais fundamento e proteger a margem da operacao.
+combinar inclusão, critério de risco e explicabilidade para permitir aprovar
+melhor, recusar com mais fundamento e proteger a margem da operação.
 
 ## Metodologia
 
-A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
+A abordagem segue uma esteira MLOps local, containerizada e reprodutível:
 
-- **Analise exploratoria:** o notebook `notebooks/01_exp_analysis.ipynb` foi
-  usado para conhecer as bases, distribuicoes, nulos e relacoes iniciais entre
-  variaveis.
-- **Ingestao:** a DAG `01_bronze_ingest_kaggle` baixa os CSVs do Kaggle e
+- **Análise exploratória:** o notebook `notebooks/01_exp_analysis.ipynb` foi
+  usado para conhecer as bases, distribuições, nulos e relações iniciais entre
+  variáveis.
+- **Ingestão:** a DAG `01_bronze_ingest_kaggle` baixa os CSVs do Kaggle e
   publica os dados brutos no bucket `raw` do MinIO.
 - **Camada Silver:** `scripts/data_sanitization.py` (DAG `02_silver_clean_data`)
   transforma oito arquivos de negocio em Parquets tratados, com QA antes da
@@ -33,26 +37,26 @@ A abordagem segue uma esteira MLOps local, containerizada e reprodutivel:
 - **Camada Gold / ABT:** `scripts/abt_transform.py` (DAG `03_gold_abt_features`)
   agrega historicos de bureau, cartao, propostas anteriores, POS/CASH e
   pagamentos para gerar `abt_train.parquet` no bucket `abt`.
-- **Modelagem:** a analise comparativa de modelos foi feita no notebook
-  `notebooks/02_model_evaluation.ipynb`. A partir dessa comparacao, o LightGBM foi
-  escolhido como modelo campeao e seu treino foi consolidado em
-  `scripts/train.py` / `notebooks/03_train_exploration.ipynb`, usando `config/model_config.yaml`
-  para features, splits, metricas e threshold.
-- **Orquestracao:** as DAGs Airflow encadeiam a esteira; o equivalente CLI e
+- **Modelagem:** a análise comparativa de modelos foi feita no notebook
+  `notebooks/02_model_evaluation.ipynb`. A partir dessa comparação, o LightGBM foi
+  escolhido como modelo campeão e seu treino foi consolidado em
+  `Model/train.py` / `notebooks/03_train_exploration.ipynb`, usando `Model/model_config.yaml`
+  para features, splits, métricas e threshold.
+- **Orquestração:** as DAGs Airflow encadeiam a esteira; o equivalente CLI é
   `scripts/pipeline_orchestration.py`.
 - **Serving:** `scripts/predict.py` alimenta a FastAPI e o Streamlit com
-  consulta de cliente, escoragem e simulacoes What-If com explicabilidade local.
+  consulta de cliente, escoragem e simulações What-If com explicabilidade local.
 
-As metricas de negocio incluem PR-AUC, F2-Score, recall da classe inadimplente,
-falsos negativos, falsos positivos e taxa de reprovacao no threshold
+As métricas de negócio incluem PR-AUC, F2-Score, recall da classe inadimplente,
+falsos negativos, falsos positivos e taxa de reprovação no threshold
 operacional.
 
-## Arquitetura Da Solucao
+## Arquitetura da solução
 
 <p align="center">
   <img
     src="docs/architecture/arquitetura-mlops-home-credit.png"
-    alt="Arquitetura MLOps do motor de decisao de credito"
+    alt="Arquitetura MLOps do motor de decisão de crédito"
     width="900"
   />
 </p>
@@ -62,26 +66,52 @@ Arquivos da arquitetura: [`PNG`](docs/architecture/arquitetura-mlops-home-credit
 
 Componentes principais:
 
-- **Airflow:** orquestra as DAGs manuais de ingestao, ETL, ABT e treinamento.
+- **Airflow:** orquestra as DAGs manuais de ingestão, ETL, ABT e treinamento.
 - **MinIO S3:** organiza o Data Lake local nos buckets `raw`, `clean`, `abt` e
   `artifacts`.
-- **Scripts Python:** concentram transformacoes, validacoes, pipelines e
-  inferencia para manter DAGs finas.
+- **Scripts Python:** concentram transformações, validações, pipelines e
+  inferência para manter DAGs finas.
 - **LightGBM:** modelo supervisionado usado para predizer probabilidade de
-  inadimplencia.
-- **FastAPI:** servico de predicao com endpoints de health check, consulta de
+  inadimplência.
+- **FastAPI:** serviço de predição com endpoints de health check, consulta de
   cliente e escoragem.
-- **Streamlit:** interface de negocio para consulta, simulacao de variaveis e
+- **Streamlit:** interface de negócio para consulta, simulação de variáveis e
   leitura dos fatores explicativos.
 
-## Pre-Requisitos
+### Interface Streamlit (estado atual)
+
+O dashboard principal (`app/dashboard.py`) foi organizado para leitura executiva
+em quatro abas:
+
+- `Mesa de Crédito`
+- `Dicionário de Variáveis`
+- `Performance e ROI`
+- `Monitoramento MLOps`
+
+No cabeçalho da aplicação:
+
+- título institucional: `Motor de Decisão de Crédito — Home Credit`
+- autoria: `Anderson Nunes`
+
+## Pre-requisitos
 
 1. Docker e Docker Compose instalados.
-2. Credenciais Kaggle em `~/.kaggle/kaggle.json`.
+2. Token da API Kaggle em `~/.kaggle/access_token` (gerado em
+   [kaggle.com/settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*).
+   Alternativa: variável de ambiente `KAGGLE_API_TOKEN`.
 3. Porta local livre para os servicos principais: `8080`, `9000`, `9001`,
    `8000` e `8501`.
 
-## Como Treinar O Modelo
+### Nota sobre dependências (app x orquestrador)
+
+- `requirements.txt` concentra dependências do runtime de app/pipeline Python
+  (API, Streamlit e scripts de dados/modelo).
+- O Apache Airflow é provido pela imagem base do serviço `airflow`
+  (`apache/airflow:3.1.2-python3.13`) definida em `Dockerfile.airflow`.
+- Pacotes extras específicos do orquestrador são instalados via
+  `requirements-airflow.txt`.
+
+## Como treinar o modelo
 
 Suba a infraestrutura:
 
@@ -127,10 +157,11 @@ Saidas esperadas:
 
 - `raw`: 10 CSVs da competicao Kaggle.
 - `clean`: Parquets Silver tratados e validados.
-- `abt`: `abt_train.parquet`.
+- `abt`: `abt_train.parquet` e `abt_demo_holdout.parquet`.
 - `artifacts`: `lightgbm_hcdr.pkl` e `model_metadata.json`.
-- `Dados/abt/abt_demo_holdout.parquet`: holdout local para demonstracao na API
-  e no dashboard.
+
+Dados oficiais de runtime ficam no MinIO (S3). Arquivos sob `Dados/` sao
+apenas staging/debug e nao competem com o lake.
 
 Para inspecionar objetos no MinIO:
 
@@ -139,7 +170,7 @@ docker compose run --rm minio-client ls --recursive local/artifacts
 docker compose run --rm minio-client stat local/abt/abt_train.parquet
 ```
 
-## Execucao Do Servico De Predicao
+## Execução do serviço de predição
 
 Depois de treinar o modelo e publicar os artefatos no MinIO, suba a API:
 
@@ -153,13 +184,13 @@ Valide o health check:
 curl -sS http://localhost:8000/
 ```
 
-Consulte o dossie de um cliente do holdout de demonstracao:
+Consulte o dossiê de um cliente do holdout de demonstração:
 
 ```bash
 curl -sS http://localhost:8000/client/139767
 ```
 
-Execute uma escoragem sem alteracoes:
+Execute uma escoragem sem alterações:
 
 ```bash
 curl -sS -X POST http://localhost:8000/score \
@@ -167,7 +198,7 @@ curl -sS -X POST http://localhost:8000/score \
   -d '{"client_id":139767,"features_override":{}}'
 ```
 
-Execute uma simulacao What-If com override de features:
+Execute uma simulação What-If com override de features:
 
 ```bash
 curl -sS -X POST http://localhost:8000/score \
@@ -175,7 +206,7 @@ curl -sS -X POST http://localhost:8000/score \
   -d '{"client_id":139767,"features_override":{"AMT_CREDIT":500000,"AMT_ANNUITY":25000}}'
 ```
 
-Para usar a interface de negocio:
+Para usar a interface de negócio:
 
 ```bash
 docker compose up -d streamlit
@@ -184,46 +215,48 @@ docker compose up -d streamlit
 Acesse `http://localhost:8501`. O dashboard consome a API internamente via
 `API_BASE_URL=http://api:8000`.
 
-## Proximos Passos De Desenvolvimento
+## Próximos passos de desenvolvimento
 
-Os itens **iii** (monitoramento em producao) e **iv** (acoes automatizadas e
-agentes de IA) do enunciado individual estao documentados como proposta
-teorica em
+Os itens **iii** (monitoramento) e **iv** (automação) possuem implementação
+operacional:
+
+- Monitoramento: DAG `05_monitor_health` / `POST /monitoring/run` →
+  `s3://artifacts/monitoring/latest.json` (saúde, artefatos, PSI/drift, schema, baseline)
+- Automação: triagem pós-`/score` e `POST /webhooks/credit-decision` →
+  `s3://artifacts/automation/`
+
+Detalhes em [`MLOps/Readme.md`](MLOps/Readme.md) e na documentação
 [`docs/architecture/mlops-monitoramento-e-automacao.md`](docs/architecture/mlops-monitoramento-e-automacao.md).
 
-Resumo:
-
-- **Monitoramento:** saude da API e das DAGs, drift e qualidade dos dados,
-  acompanhamento de PR-AUC / F2 / FN-FP e do `business_threshold` contra a
-  linha de base em `model_metadata.json`, com runbook de resposta.
-- **Automacao e agentes:** triagem da fila de credito, dossie assistido para
-  a mesa, alertas de concentracao de risco, ciclo de retreino com aprovacao
-  humana e pareceres de explicabilidade a partir do `/score` — sempre com
-  humano no loop.
-
-Demais evolucoes de modelagem (threshold, features, interpretabilidade) seguem
-subordinadas a essa governanca operacional.
+Evoluções futuras (agentes de IA para pareceres em linguagem natural, jobs
+agendados de PSI em janela viva) permanecem no roadmap, sempre com humano no loop.
 
 
-## Documentacao
+## Documentação
 
-Detalhes operacionais e tecnicos ficam em [`docs/README.md`](docs/README.md):
+Detalhes operacionais e técnicos ficam em [`docs/README.md`](docs/README.md):
 
 - `docs/architecture/ambiente-docker-e-dados.md`: ambiente Docker, servicos e volumes.
-- `docs/pipeline/camada-silver.md`: transformacoes, staging e QA de `raw` para `clean`.
-- `docs/pipeline/camada-gold-abt-design.md`: transformacoes, staging e QA de `clean`
+- `docs/pipeline/camada-silver.md`: transformações, staging e QA de `raw` para `clean`.
+- `docs/pipeline/camada-gold-abt-design.md`: transformações, staging e QA de `clean`
   para `abt`.
-- `docs/operations/catalogo-abt.md`: catalogo pesquisavel da ABT no Streamlit.
-- `docs/pipeline/dags/README.md`: indice e comandos das DAGs manuais.
+- `docs/operations/catalogo-abt.md`: dicionario de variaveis da ABT no Streamlit.
+- `docs/pipeline/dags/README.md`: índice e comandos das DAGs manuais.
 - `docs/modeling/exemplos-confusion-matrix.md`: exemplos de TN, TP, FN e FP.
-- `docs/operations/minio-client.md`: inspecao e copia de objetos no MinIO.
-- `docs/modeling/model-config.md`: guia do `config/model_config.yaml`.
+- `docs/operations/minio-client.md`: inspeção e cópia de objetos no MinIO.
+- `docs/modeling/model-config.md`: guia do `Model/model_config.yaml`.
 - `docs/architecture/mlops-monitoramento-e-automacao.md`: proposta de monitoramento (iii) e
-  de automacao / agentes de IA (iv).
+  de automação / agentes de IA (iv).
 
-## Validacao Basica
+## Validação básica
 
-Depois de alterar DAGs, scripts ou testes, rode validacoes proporcionais:
+Depois de alterar DAGs, scripts ou testes, rode validações proporcionais:
+
+```bash
+bash scripts/dev/validate_pre_defesa.sh
+```
+
+Ou, manualmente:
 
 ```bash
 docker compose exec -T airflow python -m pytest /opt/airflow/tests -q
@@ -231,5 +264,17 @@ docker compose exec -T airflow airflow dags list-import-errors
 docker compose exec -T airflow airflow dags list
 ```
 
-Todo modulo, classe, helper, fixture e funcao de teste Python novo deve possuir
-docstring em portugues. A suite usa `pytest` e `pytest-mock`.
+Todo módulo, classe, helper, fixture e função de teste Python novo deve possuir
+docstring em português. A suíte usa `pytest` e `pytest-mock`.
+
+Markers oficiais (`pytest.ini` / `tests/conftest.py`):
+
+- `streamlit` — testes da UI/catalogo (container `dev`)
+- `airflow` — testes de DAGs (container `airflow`)
+
+Exemplo:
+
+```bash
+docker compose exec -T airflow python -m pytest /opt/airflow/tests -m "not streamlit" -q
+docker compose exec -T dev python -m pytest tests -m streamlit -q
+```

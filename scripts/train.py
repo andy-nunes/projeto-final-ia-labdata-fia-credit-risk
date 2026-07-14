@@ -220,7 +220,7 @@ def train_lgbm(
     categorical_columns: list[str],
 ) -> Tuple[lgb.LGBMClassifier, float, float]:
     """Treina LightGBM e retorna modelo, scale_pos_weight e tempo de treino."""
-    ##scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
+    # scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
     scale_pos_weight = 1.0
     model = build_lgbm_classifier(config, scale_pos_weight, categorical_columns)
     start = time.perf_counter()
@@ -347,7 +347,7 @@ def run_training(
 
     df_train, df_test, df_demo = split_abt_three_way(abt, config)
     demo_path = config.resolve_demo_holdout_path()
-    write_parquet(df_demo, demo_path, fs=None)
+    write_parquet(df_demo, demo_path, fs=fs if is_s3_path(demo_path) else None)
     print(f"Holdout demo salvo: {demo_path} ({len(df_demo):,} linhas)")
 
     X_train, y_train = split_features_target(df_train, config)
@@ -367,10 +367,9 @@ def run_training(
     print("\nClassification report:")
     print(metrics["classification_report"])
 
-    use_s3 = is_s3_path(abt_path)
     if artifacts_path is None:
-        artifacts_path = config.resolve_model_artifact_path(prefer_s3=use_s3)
-    metadata_path = config.resolve_metadata_path(prefer_s3=is_s3_path(artifacts_path))
+        artifacts_path = config.resolve_model_artifact_path()
+    metadata_path = config.resolve_metadata_path()
     metadata = build_metadata(
         config=config,
         metrics=metrics,

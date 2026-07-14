@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.streamlit
 
 DASHBOARD_PATH = Path(__file__).resolve().parents[1] / "app" / "dashboard.py"
 UI_DIR = Path(__file__).resolve().parents[1] / "app" / "ui"
@@ -309,10 +310,12 @@ def test_dashboard_catalog_navigation_does_not_use_page_link_registry() -> None:
     assert "st.page_link" not in source
     assert "st.switch_page" not in source
     assert "/catalogo_abt" not in source
-    assert "tab_mesa, tab_catalogo, tab_performance = st.tabs(" in source
+    assert "tab_mesa, tab_catalogo, tab_performance, tab_monitoring = st.tabs(" in source
     assert '"🏦 Mesa de Crédito"' in source
     assert '"📖 Variáveis da Análise de Risco"' in source
     assert '"📈 Performance & ROI do Modelo"' in source
+    assert '"🛡️ Monitoramento MLOps"' in source
+    assert "_render_monitoring_tab" in source
     assert 'st.form("form_busca_cliente"' in source
     assert "def main() -> None:" in source
     assert 'if __name__ == "__main__":' in source
@@ -342,7 +345,9 @@ def test_dashboard_catalog_navigation_does_not_use_page_link_registry() -> None:
     assert 'key="btn_show_score_json"' in source
     assert "segment_rankings_cache" in source
     assert "_get_holdout_risk_scores" in source
-    assert "_local_file_fingerprint" in source
+    assert "resolve_demo_holdout_path" in source
+    assert "get_model_path" in source
+    assert "_local_file_fingerprint" not in source
     assert 'key="btn_retry_model_metrics"' in source
     assert "performance_metrics_ready" in source
     assert 'key="btn_load_model_metrics"' in source

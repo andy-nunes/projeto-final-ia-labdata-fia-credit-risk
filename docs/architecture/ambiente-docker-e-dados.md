@@ -79,7 +79,9 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
 ### Primeiros passos
 
 1. Instale Docker e Docker Compose na maquina local.
-2. Configure `~/.kaggle/kaggle.json` com as credenciais da Kaggle.
+2. Configure o token da API Kaggle em `~/.kaggle/access_token` (gerado em
+   [kaggle.com/settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*).
+   A ingestão usa `kagglehub`, que lê esse arquivo ou a variável `KAGGLE_API_TOKEN`.
 3. Rode `docker compose build`.
 4. Suba os servicos com `docker compose up -d minio airflow api streamlit`.
 5. Acesse Airflow, MinIO, API e Streamlit nos enderecos locais.
@@ -92,8 +94,8 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
 Comportamento do servico `dev`:
 
 - Monta o repositorio local em `/app`.
-- Monta `~/.kaggle` em `/root/.kaggle` como somente leitura.
-- Define `KAGGLE_CONFIG_DIR=/root/.kaggle`.
+- Monta `~/.kaggle` em `/root/.kaggle` como somente leitura (token em
+  `access_token`).
 - Define `PYTHONPATH=/app`.
 - Abre `bash` por padrao.
 
@@ -341,7 +343,7 @@ Montagem da pasta `Dados`:
 - Streamlit: `/app/Dados`
 
 O app do Streamlit esta em `app/dashboard.py`. Ele atua como cliente da API
-FastAPI configurada em `config/model_config.yaml` (`api.base_url`) e e a
+FastAPI configurada em `Model/model_config.yaml` (`api.base_url`) e e a
 homepage oficial do painel da mesa de credito.
 
 ### Dashboard Streamlit
@@ -349,11 +351,11 @@ homepage oficial do painel da mesa de credito.
 O painel apresenta o motor de decisao de credito com dados Home Credit, modelo
 LightGBM e API de escoragem.
 
-A aba **Catalogo** em `app/dashboard.py` exibe um catalogo pesquisavel das colunas da ABT com nome, tipo, categoria,
+A aba **Dicionário de Variáveis** em `app/dashboard.py` exibe um catalogo pesquisavel das colunas da ABT com nome, tipo, categoria,
 fonte, descricao, marcacao de entrada no modelo, marcacao de campo editavel e
 marcacao de categorica do modelo. A montagem fica em `app/abt_catalog.py`,
 usando o schema de `Dados/abt/abt_train.parquet`, o arquivo
-`config/model_config.yaml` e o dicionario oficial
+`Model/model_config.yaml` e o dicionario oficial
 `Dados/raw/HomeCredit_columns_description.csv`, que vem do pacote de dados da
 competicao Home Credit Default Risk no Kaggle. Colunas derivadas da camada Gold
 recebem descricao inferida pela regra de criacao ou pelo prefixo da fonte
@@ -364,7 +366,7 @@ porque widgets interativos causaram crashes nativos `Exited (139)` no runtime
 do Streamlit ao rerenderizar a pagina. A documentacao especifica fica em
 `docs/operations/catalogo-abt.md`.
 
-Os campos editaveis sao definidos em `config/model_config.yaml`. Atualmente o
+Os campos editaveis sao definidos em `Model/model_config.yaml`. Atualmente o
 dashboard permite simular `AMT_CREDIT`, `AMT_ANNUITY`, `NAME_EDUCATION_TYPE`,
 `NAME_INCOME_TYPE`, `OCCUPATION_TYPE` e `ORGANIZATION_TYPE`. Os campos
 categoricos aparecem como selecao quando existe uma lista controlada de
@@ -372,7 +374,7 @@ categorias; `ORGANIZATION_TYPE` usa o rotulo de negocio "Tipo de Organização /
 Setor".
 
 Os campos monetarios `AMT_CREDIT` (Valor Solicitado) e `AMT_ANNUITY` (Valor da
-Parcela Mensal) sao renderizados como campos de texto, nao como `number_input`.
+Parcela) sao renderizados como campos de texto, nao como `number_input`.
 Essa escolha remove os controles incrementais `- / +` do Streamlit e deixa a
 validacao sob controle da aplicacao.
 

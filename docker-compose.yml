@@ -41,8 +41,10 @@ services:
       MINIO_SECRET: minioadmin
       ARTIFACTS_PATH: s3://artifacts
       ABT_PATH: s3://abt/abt_train.parquet
+      DEMO_HOLDOUT_PATH: s3://abt/abt_demo_holdout.parquet
       MODEL_PATH: s3://artifacts/lightgbm_hcdr.pkl
       MODEL_METADATA_PATH: s3://artifacts/model_metadata.json
+      API_HEALTH_URL: http://api:8000/
       DATA_DIR: /opt/airflow/Dados
       AIRFLOW_HOSTNAME: airflow
       PYTHONPATH: /opt/airflow
@@ -51,10 +53,12 @@ services:
       - ./scripts:/opt/airflow/scripts
       - ./app:/opt/airflow/app:ro
       - ./tests:/opt/airflow/tests:ro
+      - ./pytest.ini:/opt/airflow/pytest.ini:ro
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ./Dados:/opt/airflow/Dados
-      - ./config:/opt/airflow/config
+      - ./Model:/opt/airflow/Model
+      - ./DataPipeline:/opt/airflow/DataPipeline:ro
       - ./artifacts:/opt/airflow/artifacts
       - ${HOME}/.kaggle:/home/airflow/.kaggle:ro
     ports:
@@ -102,6 +106,8 @@ services:
       MINIO_ENDPOINT_URL: http://minio:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      ABT_PATH: s3://abt/abt_train.parquet
+      DEMO_HOLDOUT_PATH: s3://abt/abt_demo_holdout.parquet
       MODEL_PATH: s3://artifacts/lightgbm_hcdr.pkl
       MODEL_METADATA_PATH: s3://artifacts/model_metadata.json
     volumes:
@@ -123,6 +129,10 @@ services:
       MINIO_ENDPOINT_URL: http://minio:9000
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      ABT_PATH: s3://abt/abt_train.parquet
+      DEMO_HOLDOUT_PATH: s3://abt/abt_demo_holdout.parquet
+      MODEL_PATH: s3://artifacts/lightgbm_hcdr.pkl
+      MODEL_METADATA_PATH: s3://artifacts/model_metadata.json
       API_BASE_URL: http://api:8000
       API_BROWSER_BASE_URL: http://localhost:8000
     volumes:

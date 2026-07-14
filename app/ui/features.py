@@ -36,9 +36,7 @@ def _render_readonly_feature(col_name: str, value: Any) -> None:
     formatted = _format_readonly_value(col_name, value)
     st.markdown(
         (
-            '<div style="padding: 0.45rem 0.75rem; border: 1px solid #e2e8f0; '
-            'border-radius: 0.5rem; background: #f8fafc; color: #334155; '
-            'min-height: 2.4rem; display: flex; align-items: center;">'
+            '<div class="readonly-value-box">'
             f"{escape(str(formatted))}"
             "</div>"
         ),
@@ -68,7 +66,7 @@ def _render_editable_feature(features: dict[str, Any], feature_name: str, client
             label_visibility="collapsed",
             key=widget_key,
         )
-        st.caption(f"Valor legível (dossiê): R$ {valor_formatado}")
+        st.caption(f"Formato de leitura: {valor_formatado}")
         return entered
 
     if feature_name in CATEGORICAL_OPTIONS:

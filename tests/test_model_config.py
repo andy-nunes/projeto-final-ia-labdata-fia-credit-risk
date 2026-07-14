@@ -44,6 +44,7 @@ def sample_config(tmp_path: Path) -> ModelConfig:
             "abt_path": "Dados/abt/abt_train.parquet",
             "abt_path_s3": "s3://abt/abt_train.parquet",
             "demo_holdout_path": "Dados/abt/abt_demo_holdout.parquet",
+            "demo_holdout_path_s3": "s3://abt/abt_demo_holdout.parquet",
             "model_artifact_path": "artifacts/lightgbm_hcdr.pkl",
             "model_artifact_path_s3": "s3://artifacts/lightgbm_hcdr.pkl",
             "metadata_path": "artifacts/model_metadata.json",
@@ -133,3 +134,19 @@ def test_performance_from_metadata_derives_tn_tp_from_legacy_metrics() -> None:
     assert perf["tn"] == 40439
     assert perf["tn"] + perf["fp"] + perf["fn"] + perf["tp"] == 61195
     assert abs(perf["recall"] - 0.6979757085020243) < 1e-12
+
+
+def test_resolve_paths_prefer_s3_lake(sample_config: ModelConfig, monkeypatch) -> None:
+    """Runtime resolve sempre o Data Lake; env sobrescreve; local não compete."""
+    monkeypatch.delenv("ABT_PATH", raising=False)
+    monkeypatch.delenv("DEMO_HOLDOUT_PATH", raising=False)
+    monkeypatch.delenv("MODEL_PATH", raising=False)
+    monkeypatch.delenv("MODEL_METADATA_PATH", raising=False)
+
+    assert sample_config.resolve_abt_path() == "s3://abt/abt_train.parquet"
+    assert sample_config.resolve_demo_holdout_path() == "s3://abt/abt_demo_holdout.parquet"
+    assert sample_config.resolve_model_artifact_path() == "s3://artifacts/lightgbm_hcdr.pkl"
+    assert sample_config.resolve_metadata_path() == "s3://artifacts/model_metadata.json"
+
+    monkeypatch.setenv("ABT_PATH", "s3://custom/abt.parquet")
+    assert sample_config.resolve_abt_path() == "s3://custom/abt.parquet"

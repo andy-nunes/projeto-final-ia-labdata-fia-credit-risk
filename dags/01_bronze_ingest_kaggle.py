@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, task
 
 from scripts.kaggle_to_minio import replace_kaggle_raw_files

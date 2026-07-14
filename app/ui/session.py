@@ -38,6 +38,14 @@ def _init_session_state() -> None:
         st.session_state.dossier_table_cache = None
     if "performance_metrics_ready" not in st.session_state:
         st.session_state.performance_metrics_ready = False
+    if "monitoring_ready" not in st.session_state:
+        st.session_state.monitoring_ready = False
+    if "monitoring_report" not in st.session_state:
+        st.session_state.monitoring_report = None
+    if "monitoring_report_error" not in st.session_state:
+        st.session_state.monitoring_report_error = None
+    if "latest_automation_event" not in st.session_state:
+        st.session_state.latest_automation_event = None
 
 def _clear_edit_widget_keys(client_id: int | None = None) -> None:
     """Remove valores de widgets What-If para evitar reaproveitar estado antigo."""
