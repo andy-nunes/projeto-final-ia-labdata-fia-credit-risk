@@ -27,6 +27,47 @@ def _render_stat_card_html(
         f"</div>"
     )
 
+
+def _triage_box_class(action: str) -> str:
+    """Classe CSS da caixa de fila sugerida."""
+    if action == "autoaprovacao_candidata":
+        return "triage-box triage-box-auto"
+    if action == "recusa_candidata":
+        return "triage-box triage-box-recusa"
+    return "triage-box triage-box-mesa"
+
+
+def _render_triage_queue_html(
+    *,
+    action: str,
+    action_label: str,
+    event_path: str | None = None,
+) -> str:
+    """Card visível da fila sugerida (automação / webhook) para a banca."""
+    titles = {
+        "autoaprovacao_candidata": "Fila sugerida: autoaprovação candidata",
+        "mesa_analise": "Fila sugerida: mesa de crédito",
+        "recusa_candidata": "Fila sugerida: recusa candidata",
+    }
+    title = titles.get(action, f"Fila sugerida: {action}")
+    path_html = ""
+    if event_path:
+        path_html = (
+            f'<p class="triage-path">Evento auditável no MinIO: '
+            f"<code>{escape(event_path)}</code></p>"
+        )
+    return (
+        f'<div class="{_triage_box_class(action)}">'
+        f'<div class="triage-kicker">Automação pós-escoragem · humano no loop</div>'
+        f'<div class="triage-title">{escape(title)}</div>'
+        f'<p class="triage-body">{escape(action_label)}. '
+        f"A automação encaminha a proposta para esta fila; "
+        f"o analista confirma a decisão de crédito.</p>"
+        f"{path_html}"
+        f"</div>"
+    )
+
+
 def _risk_band_tone(risk_band_value: Any) -> str:
     """Mapeia a faixa de risco para a cor semantica do card."""
     normalized = str(risk_band_value or "").strip().lower()
@@ -81,15 +122,20 @@ def _build_score_stat_cards(
     threshold_txt = (
         f"{float(threshold_value):.2%}" if threshold_value is not None else "—"
     )
-    scored_client = result.get("sk_id_curr", client_id)
     probability_tone = _probability_tone(proba, threshold_value)
 
     return [
         _render_stat_card_html("Decisão", result.get("label", "—"), tone=card_tone),
         _render_stat_card_html(
-            "Risk Band",
+            "Faixa de risco",
             result.get("risk_band", "—"),
             tone=_risk_band_tone(result.get("risk_band")),
+        ),
+        _render_stat_card_html("Classe prevista", prediction_label),
+        _render_stat_card_html(
+            "Régua de decisão",
+            threshold_txt,
+            note="Corte para reprovação",
         ),
         _render_stat_card_html(
             "Prob. inadimplência",
@@ -101,9 +147,6 @@ def _build_score_stat_cards(
             approval_proba_txt,
             tone=probability_tone,
         ),
-        _render_stat_card_html("Classe prevista", prediction_label),
-        _render_stat_card_html("Threshold", threshold_txt, note="reprovação"),
-        _render_stat_card_html("Cliente", scored_client),
     ]
 
 def _build_audit_message(

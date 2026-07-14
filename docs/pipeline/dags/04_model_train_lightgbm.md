@@ -25,7 +25,7 @@ Servicos:
 Entradas:
 
 - `s3://abt/abt_train.parquet`
-- `config/model_config.yaml`
+- `Model/model_config.yaml`
 
 Saidas:
 
@@ -64,7 +64,7 @@ Quando executada, a DAG:
 3. Separa a base em treino, teste e holdout de demonstracao, mantendo
    estratificacao por `TARGET`.
 4. Salva o holdout de demonstracao em `Dados/abt/abt_demo_holdout.parquet`.
-5. Treina o `LightGBMClassifier` com os parametros de `config/model_config.yaml`.
+5. Treina o `LightGBMClassifier` com os parametros de `Model/model_config.yaml`.
 6. Avalia o modelo no conjunto de teste.
 7. Publica o modelo serializado no bucket `artifacts`.
 8. Publica os metadados de treinamento no bucket `artifacts`.

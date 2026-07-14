@@ -23,8 +23,11 @@ Servicos:
 
 Credenciais e variaveis:
 
-- O container do Airflow precisa acessar as credenciais Kaggle montadas em
-  `/home/airflow/.kaggle`.
+- O container do Airflow monta `~/.kaggle` em `/home/airflow/.kaggle`
+  (somente leitura). O `kagglehub` autentica com `access_token` nessa pasta
+  ou com a variável de ambiente `KAGGLE_API_TOKEN`.
+- Token: gere em [kaggle.com/settings/api](https://www.kaggle.com/settings/api)
+  (*Generate New Token*) e salve em `~/.kaggle/access_token`.
 - `MINIO_ENDPOINT_URL`, padrao `http://minio:9000`.
 - `MINIO_ROOT_USER`, padrao `minioadmin`.
 - `MINIO_ROOT_PASSWORD`, padrao `minioadmin`.

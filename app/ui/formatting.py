@@ -48,10 +48,10 @@ def _format_delay_mean(abs_days: float) -> str:
     return f"{int(abs_days / 365.25)} anos"
 
 def _format_brl(value: float) -> str:
-    """Formata número no padrão monetário brasileiro (R$ 1.250.600,00)."""
+    """Formata valor monetário sem símbolo de moeda (1.250.600,00)."""
     formatted = f"{value:,.2f}"
     formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"R$ {formatted}"
+    return formatted
 
 def _parse_money_input(raw_value: Any) -> float | None:
     """Tenta converter texto de input monetário em float; None se inválido."""

@@ -24,7 +24,7 @@ Home Credit Default Risk.
 ## Modelagem
 
 - [`modeling/model-config.md`](modeling/model-config.md): guia do
-  `config/model_config.yaml`.
+  `Model/model_config.yaml`.
 - [`modeling/exemplos-confusion-matrix.md`](modeling/exemplos-confusion-matrix.md):
   exemplos de TN, TP, FN e FP.
 - [`modeling/eda-modelo.md`](modeling/eda-modelo.md): guia introdutorio da
@@ -32,8 +32,8 @@ Home Credit Default Risk.
 
 ## Operacao
 
-- [`operations/catalogo-abt.md`](operations/catalogo-abt.md): catalogo pesquisavel
-  da ABT no Streamlit.
+- [`operations/catalogo-abt.md`](operations/catalogo-abt.md): dicionario de
+  variaveis da ABT no Streamlit.
 - [`operations/minio-client.md`](operations/minio-client.md): inspecao e copia de
   objetos no MinIO.
 

@@ -1,10 +1,11 @@
-# Catalogo da ABT no Streamlit
+# Dicionario de Variaveis da ABT no Streamlit
 
 ## Objetivo
 
-O catalogo da ABT documenta, dentro do Streamlit, todas as colunas da tabela
-analitica final usada pelo modelo LightGBM. Ele e acessado pela aba
-**Catalogo** em `app/dashboard.py` (modulo `app/abt_catalog.py`).
+O dicionario de variaveis da ABT documenta, dentro do Streamlit, todas as
+colunas da tabela analitica final usada pelo modelo LightGBM. Ele e acessado
+pela aba **Dicionário de Variáveis** em `app/dashboard.py` (modulo
+`app/abt_catalog.py`).
 
 A tela permite consultar:
 
@@ -20,11 +21,11 @@ A tela permite consultar:
 
 ## Fontes De Metadados
 
-A montagem do catalogo fica em `app/abt_catalog.py` e combina tres fontes:
+A montagem do dicionario fica em `app/abt_catalog.py` e combina tres fontes:
 
 1. Schema de `Dados/abt/abt_train.parquet`, lido com `pyarrow` sem carregar o
    Parquet inteiro em memoria.
-2. Configuracao de `config/model_config.yaml`, usada para marcar colunas fora
+2. Configuracao de `Model/model_config.yaml`, usada para marcar colunas fora
    do modelo, features editaveis e features categoricas.
 3. Dicionario oficial `Dados/raw/HomeCredit_columns_description.csv`,
    distribuido no pacote de dados da competicao Home Credit Default Risk no
@@ -37,7 +38,7 @@ engenharia ou pelo prefixo da fonte agregada (`BUREAU_`, `BB_`, `POS_`, `CC_`,
 ## Descricoes Em Portugues
 
 As descricoes oficiais do Kaggle estao em ingles. Antes de montar o dataframe
-do catalogo, `app/abt_catalog.py` aplica `translate_description`, que traduz os
+do dicionario, `app/abt_catalog.py` aplica `translate_description`, que traduz os
 textos recorrentes para portugues.
 
 Tambem ha uma regra para as flags documentais:
@@ -47,25 +48,25 @@ Did client provide document N -> Indica se o cliente apresentou o documento N.
 ```
 
 As descricoes derivadas e agregadas ja sao mantidas em portugues no proprio
-codigo do catalogo. Se novas colunas raw entrarem na ABT e aparecerem com
+codigo do dicionario. Se novas colunas raw entrarem na ABT e aparecerem com
 descricao em ingles, atualize `DESCRIPTION_TRANSLATIONS` em
 `app/abt_catalog.py`.
 
 ## Arquitetura Da Tela
 
-A pagina do catalogo usa metricas simples do Streamlit, mas a experiencia
+A pagina do dicionario usa metricas simples do Streamlit, mas a experiencia
 pesquisavel roda em um componente HTML/JavaScript client-side gerado por
 `render_catalog_explorer_html`.
 
 Essa decisao e intencional. Durante os testes manuais, widgets interativos do
-Streamlit no catalogo (`st.dataframe`, `st.multiselect`, `st.selectbox`,
+Streamlit no dicionario (`st.dataframe`, `st.multiselect`, `st.selectbox`,
 `st.text_input` e `st.download_button`) provocaram crashes nativos do processo
 com status `Exited (139)` em rerenders sucessivos. Por isso, busca, filtros,
 tabela e download CSV nao devem voltar a usar esses widgets nessa pagina.
 
 O componente client-side:
 
-- carrega todos os registros do catalogo uma vez;
+- carrega todos os registros do dicionario uma vez;
 - filtra por texto no navegador;
 - filtra por categoria e fonte sem rerenderizar o Streamlit;
 - permite remover filtros clicando novamente no chip ativo;

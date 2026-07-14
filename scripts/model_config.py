@@ -13,7 +13,17 @@ from typing import Any
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "model_config.yaml"
+_LEGACY_CONFIG_PATH = REPO_ROOT / "config" / "model_config.yaml"
+DEFAULT_CONFIG_PATH = REPO_ROOT / "Model" / "model_config.yaml"
+
+
+def resolve_default_config_path() -> Path:
+    """Resolve o YAML padrão do modelo (Model/ com fallback legado em config/)."""
+    if DEFAULT_CONFIG_PATH.is_file():
+        return DEFAULT_CONFIG_PATH
+    if _LEGACY_CONFIG_PATH.is_file():
+        return _LEGACY_CONFIG_PATH
+    return DEFAULT_CONFIG_PATH
 
 
 @dataclass(frozen=True)
@@ -101,44 +111,50 @@ class ModelConfig:
         return str(paths[legacy])
 
     def resolve_abt_path(self) -> str:
-        """Retorna caminho local da ABT se existir; caso contrário, S3."""
+        """Retorna o caminho oficial da ABT no Data Lake (S3/MinIO).
+
+        Variável de ambiente ``ABT_PATH`` sobrescreve (útil em testes).
+        Caminhos locais em ``paths.abt_path`` são apenas referência; não entram
+        no runtime de treino/serving.
+        """
         env_path = os.getenv("ABT_PATH", "").strip()
         if env_path:
             return env_path
-        local_rel = self._resolve_path_key("abt_path", "abt")
-        local_path = REPO_ROOT / local_rel
-        if local_path.exists():
-            return str(local_path)
         return self._resolve_path_key("abt_path_s3", "abt_s3")
 
-    def resolve_demo_holdout_path(self) -> Path:
+    def resolve_demo_holdout_path(self) -> str:
+        """Retorna o holdout de demonstração no Data Lake (S3/MinIO).
+
+        Variável ``DEMO_HOLDOUT_PATH`` sobrescreve. Sem fallback local.
+        """
         env_path = os.getenv("DEMO_HOLDOUT_PATH", "").strip()
         if env_path:
-            return Path(env_path)
-        return REPO_ROOT / self._resolve_path_key("demo_holdout_path", "demo_holdout")
+            return env_path
+        return self._resolve_path_key("demo_holdout_path_s3", "demo_holdout_s3")
 
-    def resolve_model_artifact_path(self, prefer_s3: bool = False) -> str:
+    def resolve_model_artifact_path(self, prefer_s3: bool = True) -> str:
+        """Retorna o artefato do modelo no Data Lake (S3/MinIO).
+
+        ``prefer_s3`` é mantido por compatibilidade e ignorado: o lake é sempre
+        a fonte oficial. ``MODEL_PATH`` sobrescreve.
+        """
+        _ = prefer_s3
         env_path = os.getenv("MODEL_PATH", "").strip()
         if env_path:
             return env_path
-        if prefer_s3:
-            return self._resolve_path_key("model_artifact_path_s3", "model_artifact_s3")
-        local_rel = self._resolve_path_key("model_artifact_path", "model_artifact")
-        local_path = REPO_ROOT / local_rel
-        if local_path.parent.exists():
-            return str(local_path)
         return self._resolve_path_key("model_artifact_path_s3", "model_artifact_s3")
 
-    def resolve_metadata_path(self, prefer_s3: bool = False) -> str:
+    def resolve_metadata_path(self, prefer_s3: bool = True) -> str:
+        """Retorna metadados do treino no Data Lake (S3/MinIO).
+
+        ``prefer_s3`` é ignorado (compatibilidade). ``MODEL_METADATA_PATH``
+        sobrescreve.
+        """
+        _ = prefer_s3
         env_path = os.getenv("MODEL_METADATA_PATH", "").strip()
         if env_path:
             return env_path
-        local_rel = self._resolve_path_key("metadata_path", "metadata")
-        local_path = REPO_ROOT / local_rel
-        if not prefer_s3:
-            return str(local_path)
         return self._resolve_path_key("metadata_path_s3", "metadata_s3")
-
     def feature_columns(self, available_columns: list[str]) -> list[str]:
         """Resolve colunas de features conforme trilho configurado."""
         drop = set(self.drop_cols)
@@ -166,7 +182,7 @@ class ModelConfig:
 
 def load_model_config(config_path: str | Path | None = None) -> ModelConfig:
     """Carrega YAML de configuração do modelo."""
-    path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
+    path = Path(config_path) if config_path else resolve_default_config_path()
     with path.open(encoding="utf-8") as handle:
         raw = yaml.safe_load(handle)
     _validate_splits(raw)
@@ -218,44 +234,34 @@ def load_model_metadata(
     *,
     fs: Any | None = None,
 ) -> dict[str, Any]:
-    """Carrega metadados do treino (local primeiro; S3 como fallback)."""
+    """Carrega metadados do treino exclusivamente do caminho oficial (S3/MinIO)."""
     cfg = config or get_model_config()
-    candidates: list[str] = [cfg.resolve_metadata_path(prefer_s3=False)]
-    s3_path = cfg.resolve_metadata_path(prefer_s3=True)
-    if s3_path not in candidates:
-        candidates.append(s3_path)
+    path = cfg.resolve_metadata_path()
 
-    errors: list[Exception] = []
-    for path in candidates:
-        try:
-            if _is_s3_path(path):
-                if fs is None:
-                    import s3fs
+    try:
+        if _is_s3_path(path):
+            if fs is None:
+                import s3fs
 
-                    fs = s3fs.S3FileSystem(
-                        key=os.getenv("MINIO_ROOT_USER", "minioadmin"),
-                        secret=os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"),
-                        client_kwargs={
-                            "endpoint_url": os.getenv(
-                                "MINIO_ENDPOINT_URL", "http://minio:9000"
-                            )
-                        },
-                    )
-                with fs.open(path, "rb") as handle:
-                    return json.loads(handle.read().decode("utf-8"))
-            target = Path(path)
-            if target.is_file() and target.stat().st_size > 0:
-                with target.open(encoding="utf-8") as handle:
-                    return json.load(handle)
-        except Exception as exc:  # noqa: BLE001 — tenta próximo candidato
-            errors.append(exc)
-
-    detail = f" Último erro: {errors[-1]}" if errors else ""
-    raise FileNotFoundError(
-        "Metadados do modelo indisponíveis em artifacts/model_metadata.json "
-        f"(e fallback S3). Re-execute a DAG de treino.{detail}"
-    )
-
+                fs = s3fs.S3FileSystem(
+                    key=os.getenv("MINIO_ROOT_USER", "minioadmin"),
+                    secret=os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"),
+                    client_kwargs={
+                        "endpoint_url": os.getenv(
+                            "MINIO_ENDPOINT_URL", "http://minio:9000"
+                        )
+                    },
+                )
+            with fs.open(path, "rb") as handle:
+                return json.loads(handle.read().decode("utf-8"))
+        target = Path(path)
+        with target.open(encoding="utf-8") as handle:
+            return json.load(handle)
+    except Exception as exc:
+        raise FileNotFoundError(
+            f"Metadados do modelo indisponíveis em {path}. "
+            "Re-execute a DAG 04_model_train_lightgbm."
+        ) from exc
 
 def performance_from_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     """Extrai matriz de confusão e KPIs do split de teste a partir do metadata."""

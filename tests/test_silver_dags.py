@@ -3,10 +3,14 @@
 from pathlib import Path
 
 import pytest
+
+pytest.importorskip("airflow")
+
 from airflow.models import DagBag
 
 from scripts.silver_transformations import SILVER_TABLES
 
+pytestmark = pytest.mark.airflow
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DAGS_DIR = PROJECT_ROOT / "dags"

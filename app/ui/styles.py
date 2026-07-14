@@ -65,6 +65,11 @@ _PAGE_STYLE = """
         min-height: 2.75rem;
         background-color: #ffffff;
     }
+    div[data-testid="stTextInput"],
+    div[data-testid="stNumberInput"],
+    div[data-testid="stSelectbox"] {
+        margin-bottom: 0.65rem;
+    }
     div[data-testid="stButton"] button {
         border-radius: 8px !important;
         min-height: 2.75rem;
@@ -101,10 +106,70 @@ _PAGE_STYLE = """
     }
     .approved-box h3 { color: #15803d; }
     .rejected-box h3 { color: #b91c1c; }
+    .triage-box {
+        border-radius: 8px;
+        padding: 1rem 1.15rem;
+        margin: 0.85rem 0 1rem 0;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+    }
+    .triage-box-auto {
+        background: rgba(22, 163, 74, 0.08);
+        border-color: #86efac;
+    }
+    .triage-box-mesa {
+        background: rgba(217, 119, 6, 0.10);
+        border-color: #fcd34d;
+    }
+    .triage-box-recusa {
+        background: rgba(220, 38, 38, 0.08);
+        border-color: #fca5a5;
+    }
+    .triage-kicker {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin: 0 0 0.35rem 0;
+    }
+    .triage-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0 0 0.35rem 0;
+        color: #0f172a;
+        line-height: 1.3;
+    }
+    .triage-box-auto .triage-title { color: #15803d; }
+    .triage-box-mesa .triage-title { color: #b45309; }
+    .triage-box-recusa .triage-title { color: #b91c1c; }
+    .triage-body {
+        margin: 0;
+        color: #334155;
+        font-size: 0.92rem;
+        line-height: 1.45;
+    }
+    .triage-path {
+        margin: 0.55rem 0 0 0;
+        font-size: 0.78rem;
+        color: #64748b;
+        word-break: break-all;
+    }
     .feature-label {
-        margin: 0 0 0.28rem 0;
-        min-height: 2.35rem;
+        margin: 0 0 0.4rem 0;
+        min-height: 1.55rem;
         line-height: 1.25;
+    }
+    .readonly-value-box {
+        padding: 0.45rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        background: #f8fafc;
+        color: #334155;
+        min-height: 2.4rem;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.68rem;
     }
     .feature-label-business {
         color: #0f172a;
@@ -238,6 +303,9 @@ _PAGE_STYLE = """
         font-size: 0.9rem;
         line-height: 1.45;
     }
+    .dossier-actions {
+        margin-top: 0.75rem;
+    }
     @media (max-width: 760px) {
         .stat-grid {
             grid-template-columns: 1fr;
@@ -261,11 +329,25 @@ _PAGE_STYLE = """
     button[data-baseweb="tab"] {
         font-weight: 650;
         letter-spacing: 0.01em;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0.45rem 1.15rem !important;
+        margin: 0 !important;
+        min-height: auto !important;
+        color: #334155 !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #1d4ed8 !important;
+        background: #eff6ff !important;
+        border-radius: 6px !important;
+        font-weight: 700;
     }
     div[data-testid="stTabs"] [role="tablist"] {
-        gap: 0.35rem;
+        gap: 0.9rem;
         border-bottom: 1px solid #e2e8f0;
-        margin-bottom: 0.35rem;
+        margin-bottom: 0.45rem;
+        padding-bottom: 0.15rem;
     }
     div[data-testid="stForm"] {
         border: 1px solid #e2e8f0;

@@ -26,6 +26,8 @@ projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
   sequenciais; ao final dispara `04_model_train_lightgbm`.
 - [`04_model_train_lightgbm`](04_model_train_lightgbm.md): treina o modelo a partir da ABT no
   bucket `abt` e publica modelo e metadados no bucket `artifacts` (fim da esteira).
+- [`05_monitor_health`](05_monitor_health.md): monitoramento mínimo (API + artefatos
+  MinIO + coerência de threshold); publica `s3://artifacts/monitoring/latest.json`.
 
 ## Comandos uteis
 

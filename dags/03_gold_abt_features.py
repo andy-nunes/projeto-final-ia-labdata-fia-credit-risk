@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, get_current_context, task, task_group
 
 from scripts.abt_transform import (

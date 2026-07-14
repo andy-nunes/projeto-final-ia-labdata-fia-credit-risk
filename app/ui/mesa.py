@@ -15,6 +15,7 @@ from app.ui.components import (
     _build_score_stat_cards,
     _render_factor_row_html,
     _render_override_item_html,
+    _render_triage_queue_html,
 )
 from app.ui.constants import (
     COMPLIANCE_404_MSG,
@@ -131,6 +132,44 @@ def _render_score_result(
         unsafe_allow_html=True,
     )
 
+    automation = result.get("automation") or {}
+    if automation and not automation.get("error"):
+        action = str(automation.get("action", "mesa_analise"))
+        action_label = str(automation.get("action_label", action))
+        event_path = automation.get("event_path") or ""
+        st.markdown(
+            _render_triage_queue_html(
+                action=action,
+                action_label=action_label,
+                event_path=event_path or None,
+            ),
+            unsafe_allow_html=True,
+        )
+        # Espelha na aba Monitoramento para a demo de MLOps.
+        st.session_state.latest_automation_event = {
+            "client_id": client_id,
+            "probability": result.get("probability"),
+            "threshold": result.get("threshold"),
+            "risk_band": result.get("risk_band"),
+            "label": result.get("label"),
+            "prediction": result.get("prediction"),
+            "action": action,
+            "action_label": action_label,
+            "human_in_the_loop": automation.get("human_in_the_loop", True),
+            "top_risk_factors": result.get("top_risk_factors") or [],
+            "top_positive_factors": result.get("top_positive_factors") or [],
+            "event_path": event_path,
+            "storage": {
+                "event_path": event_path,
+                "latest_path": automation.get("latest_path"),
+            },
+        }
+    elif automation.get("error"):
+        st.warning(
+            "Escoragem ok, mas a publicação do evento de automação falhou: "
+            f"{automation.get('error')}"
+        )
+
     applied_overrides = result.get("applied_overrides") or {}
     with st.expander("Simulação aplicada"):
         if applied_overrides:
@@ -204,18 +243,18 @@ def _render_score_result(
         else:
             st.warning(audit_message)
 
-    with st.expander("Output - JSON"):
+    with st.expander("Saída técnica (JSON)"):
         if st.session_state.get("score_json_ready"):
             st.json(result)
         else:
             if st.button(
-                "Mostrar JSON da escoragem",
+                "Exibir JSON da escoragem",
                 key="btn_show_score_json",
                 use_container_width=True,
             ):
                 _set_panel_flag("score_json_ready", True)
             st.caption(
-                "O JSON completo só é montado sob demanda para não pesar o rerun."
+                "A saída completa é exibida sob demanda para manter a experiência fluida."
             )
 
 def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
@@ -226,7 +265,7 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
         """
         <div class="section-band">
             <div class="section-kicker">Simulação</div>
-            <div class="section-title">Dados atualizados para simulação</div>
+            <div class="section-title">Simulação de cenário (What-If)</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -287,6 +326,7 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
                 _render_readonly_feature(col_name, features.get(col_name))
 
     if st.session_state.get("dossier_table_ready"):
+        st.markdown('<div class="dossier-actions">', unsafe_allow_html=True)
         unload_col, _ = st.columns([1, 2])
         with unload_col:
             if st.button(
@@ -299,6 +339,7 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
                     False,
                     dossier_table_cache=None,
                 )
+        st.markdown("</div>", unsafe_allow_html=True)
         with st.expander(
             "Ver dossiê completo (todas as variáveis da ABT)",
             expanded=True,
@@ -310,12 +351,14 @@ def _render_client_workspace(features: dict[str, Any], client_id: int) -> None:
                 column_order=list(_DOSSIER_TABLE_COLUMNS),
             )
     else:
+        st.markdown('<div class="dossier-actions">', unsafe_allow_html=True)
         if st.button(
             "Carregar dossiê completo (todas as variáveis da ABT)",
             key="btn_load_dossier_table",
             use_container_width=True,
         ):
             _set_panel_flag("dossier_table_ready", True)
+        st.markdown("</div>", unsafe_allow_html=True)
         st.caption(
             "O dossiê completo da ABT só é montado sob demanda para não "
             "pesar cada interação da mesa."

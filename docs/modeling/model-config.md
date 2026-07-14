@@ -1,6 +1,6 @@
 # Configuracao Do Modelo
 
-Este documento explica o arquivo `config/model_config.yaml`, que centraliza
+Este documento explica o arquivo `Model/model_config.yaml`, que centraliza
 regras de negocio, caminhos, features e parametros usados no treinamento,
 inferencia via API e dashboard Streamlit.
 
@@ -337,7 +337,7 @@ usuario.
 
 ## Checklist De Alteracao
 
-Ao alterar `config/model_config.yaml`:
+Ao alterar `Model/model_config.yaml`:
 
 1. Confirme que os splits somam `1.0`.
 2. Se mudar features do modelo, rode treinamento novamente.
