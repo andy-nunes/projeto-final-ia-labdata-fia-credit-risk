@@ -141,7 +141,7 @@ services:
       MODEL_PATH: s3://artifacts/lightgbm_hcdr.pkl
       MODEL_METADATA_PATH: s3://artifacts/model_metadata.json
       API_BASE_URL: http://api:8000
-      API_BROWSER_BASE_URL: http://localhost:8000
+      API_BROWSER_BASE_URL: ${API_BROWSER_BASE_URL:-http://home-credit.api.localhost}
     volumes:
       - .:/app
       - ./Dados:/app/Dados
@@ -155,6 +155,19 @@ services:
     depends_on:
       - minio
       - api
+
+  reverse-proxy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    restart: unless-stopped
+    depends_on:
+      - airflow
+      - minio
+      - api
+      - streamlit
 
 volumes:
   minio_data:

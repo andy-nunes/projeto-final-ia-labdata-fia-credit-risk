@@ -107,8 +107,8 @@ No cabeçalho da aplicação:
    - `~/.config/fia-credit-risk/kaggle/kaggle.env`
    - `~/.config/fia-credit-risk/minio/minio.env`
    - `~/.config/fia-credit-risk/airflow/airflow.env`
-5. Porta local livre para os servicos principais: `8080`, `9000`, `9001`,
-   `8000` e `8501`.
+5. Porta local livre para os servicos principais: `80`, `8080`, `9000`,
+   `9001`, `8000` e `8501`.
 
 ### Contrato de configuracao das integracoes externas
 
@@ -161,7 +161,9 @@ ambientes Docker diferentes.
 
 ### 2. Executar o Pipeline de Dados e Treinamento (Airflow)
 
-1. Acesse o orquestrador: **`http://localhost:8080`** (auth local via `AIRFLOW_SIMPLE_AUTH_MANAGER_USERS`; default: `admin:admin`).
+1. Acesse o orquestrador: **`http://localhost:8080`** ou
+   **`http://home-credit.airflow.localhost`** (auth local via
+   `AIRFLOW_SIMPLE_AUTH_MANAGER_USERS`; default: `admin:admin`).
 2. Despause as DAGs da esteira Medalhão + monitoramento e dispare apenas a primeira; as demais da esteira são acionadas automaticamente via `TriggerDagRunOperator`:
    * `01_bronze_ingest_kaggle` — ingestão dos CSVs brutos no bucket `raw` → dispara Silver
    * `02_silver_clean_data` — padronização e validação no bucket `clean` → dispara Gold
@@ -250,8 +252,30 @@ Para usar a interface de negócio:
 docker compose up -d streamlit
 ```
 
-Acesse `http://localhost:8501`. O dashboard consome a API internamente via
-`API_BASE_URL=http://api:8000`.
+Acesse `http://localhost:8501` ou `http://home-credit.risk-desk.localhost`.
+O dashboard consome a API internamente via `API_BASE_URL=http://api:8000`.
+
+### Dominios locais amigaveis (sem portas na URL)
+
+O `docker-compose.yml` inclui o servico `reverse-proxy` (Caddy) para expor os
+servicos com hostnames locais:
+
+- `http://home-credit.airflow.localhost` -> Airflow
+- `http://home-credit.minio.localhost` -> MinIO Console
+- `http://home-credit.risk-desk.localhost` -> Dashboard Streamlit
+- `http://home-credit.api.localhost` -> API FastAPI
+
+Para subir somente o proxy (com os apps ja em execucao):
+
+```bash
+docker compose up -d reverse-proxy
+```
+
+Para subir stack completa incluindo proxy:
+
+```bash
+docker compose up -d minio airflow api streamlit reverse-proxy
+```
 
 ### Configuração do CredIA (Gemini)
 
@@ -354,6 +378,10 @@ implementação operacional:
   `s3://artifacts/automation/`
 - CredIA: `POST /score/ai-commentary` + bloco visual na Mesa de Crédito para
   insights e checklist ao gerente
+
+Evoluções planejadas de continuidade (roadmap de monitoramento e automação/IA)
+estão detalhadas em `MLOps/Readme.md`, na seção
+`Próximos passos de desenvolvimento (iii e iv)`.
 
 Detalhes em [`MLOps/Readme.md`](MLOps/Readme.md) e na documentação
 [`docs/architecture/mlops-monitoramento-e-automacao.md`](docs/architecture/mlops-monitoramento-e-automacao.md).

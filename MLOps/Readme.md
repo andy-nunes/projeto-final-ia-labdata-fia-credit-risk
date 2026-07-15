@@ -295,6 +295,56 @@ GEMINI_MODEL_FALLBACKS=gemini-2.0-flash-lite,gemini-2.5-flash-lite
 
 ---
 
+## Próximos passos de desenvolvimento (iii e iv)
+
+Embora monitoramento e automação já estejam operacionais, a evolução contínua
+do motor prevê os seguintes incrementos para ciclos futuros.
+
+### (iii) Monitoramento — roadmap
+
+**Curto prazo**
+
+- Persistir histórico de monitoramento por data/hora (não apenas `latest.json`)
+  para facilitar auditoria temporal.
+- Adicionar alertas ativos (Slack/e-mail/webhook) quando PSI ou disponibilidade
+  ultrapassarem limites críticos.
+- Expandir o contrato de dados com checks de nullability, ranges e categorias
+  obrigatórias por feature crítica.
+
+**Médio prazo**
+
+- Incluir monitoramento de performance pós-decisão (realizado x previsto) com
+  janela móvel por safra de concessão.
+- Versionar baseline de monitoramento por versão de modelo para comparação
+  entre releases.
+- Publicar painel executivo de saúde (SLA, drift, qualidade e estabilidade) para
+  acompanhamento da operação.
+
+### (iv) Automação e agentes de IA — roadmap
+
+**Curto prazo**
+
+- Adicionar política de fila por segmento (ex.: renda/faixa de risco) para
+  priorização operacional da mesa.
+- Implementar trilha de aprovação humana no webhook (status, responsável e
+  justificativa) para governança ponta a ponta.
+- Padronizar playbooks automáticos por fila (`autoaprovacao`, `mesa_analise`,
+  `recusa_candidata`) com checklist de compliance.
+
+**Médio prazo**
+
+- Evoluir o CredIA para recomendação orientada por política de crédito (ação
+  sugerida + evidências de suporte), mantendo humano no loop.
+- Acoplar feedback da decisão final da mesa para aprendizado de políticas e
+  recalibração de thresholds.
+- Implementar mecanismo de champion-challenger para comparar estratégias de
+  régua de aprovação sem risco operacional direto.
+
+Esses próximos passos mantêm o projeto aderente ao enunciado (iii e iv) e
+demonstram maturidade de operação contínua além do MVP entregue.
+
+---
+
 ## Mapa de arquivos (conformidade com enunciado)
 
 | Caminho exigido | Implementação |

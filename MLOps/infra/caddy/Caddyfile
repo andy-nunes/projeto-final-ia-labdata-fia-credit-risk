@@ -1,0 +1,15 @@
+http://home-credit.airflow.localhost {
+    reverse_proxy airflow:8080
+}
+
+http://home-credit.minio.localhost {
+    reverse_proxy minio:9001
+}
+
+http://home-credit.risk-desk.localhost {
+    reverse_proxy streamlit:8501
+}
+
+http://home-credit.api.localhost {
+    reverse_proxy api:8000
+}

@@ -320,16 +320,20 @@ Foram adicionados servicos locais para a etapa de arquitetura/MLOps:
 Comando para subir os servicos:
 
 ```bash
-docker compose up -d minio airflow api streamlit
+docker compose up -d minio airflow api streamlit reverse-proxy
 ```
 
 Acessos:
 
 - Airflow: `http://localhost:8080`
+- Airflow (hostname amigavel): `http://home-credit.airflow.localhost`
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
+- MinIO Console (hostname amigavel): `http://home-credit.minio.localhost`
 - API FastAPI: `http://localhost:8000`
+- API FastAPI (hostname amigavel): `http://home-credit.api.localhost`
 - Streamlit: `http://localhost:8501`
+- Streamlit (hostname amigavel): `http://home-credit.risk-desk.localhost`
 
 Credenciais locais de desenvolvimento:
 
