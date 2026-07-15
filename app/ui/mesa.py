@@ -9,10 +9,16 @@ import pandas as pd
 import streamlit as st
 
 from app.abt_catalog import render_catalog
-from app.ui.api import _parse_http_error, api_get_client, api_post_score
+from app.ui.api import (
+    _parse_http_error,
+    api_get_client,
+    api_post_ai_commentary,
+    api_post_score,
+)
 from app.ui.components import (
     _build_audit_message,
     _build_score_stat_cards,
+    _render_ai_commentary_html,
     _render_factor_row_html,
     _render_override_item_html,
     _render_triage_queue_html,
@@ -97,8 +103,19 @@ def _run_credit_score(features: dict[str, Any]) -> None:
     """Executa escoragem usando valores commitados pelo form de simulação."""
     client_id = int(st.session_state.client_id)
     overrides = _collect_overrides_from_session(client_id, features)
-    st.session_state.score_result = api_post_score(client_id, overrides)
+    result = api_post_score(client_id, overrides, emit_ai_commentary=False)
+    result.pop("ai_commentary", None)
+    st.session_state.score_result = result
     st.session_state.score_json_ready = False
+
+
+def _run_ai_commentary(result: dict[str, Any]) -> None:
+    """Gera parecer CredIA sob demanda sem rerodar o modelo de score."""
+    score_payload = {**result}
+    score_payload.pop("ai_commentary", None)
+    ai_payload = api_post_ai_commentary(score_payload)
+    ai_commentary = ai_payload.get("ai_commentary") or {}
+    st.session_state.score_result = {**result, "ai_commentary": ai_commentary}
 
 def _render_score_result(
     features: dict[str, Any],
@@ -169,6 +186,37 @@ def _render_score_result(
             "Escoragem ok, mas a publicação do evento de automação falhou: "
             f"{automation.get('error')}"
         )
+
+    ai_commentary = result.get("ai_commentary") or {}
+    if ai_commentary:
+        st.markdown(
+            _render_ai_commentary_html(ai_commentary),
+            unsafe_allow_html=True,
+        )
+        with st.expander("Auditoria IA (MVP)"):
+            st.json(ai_commentary.get("audit") or {})
+    else:
+        st.caption("Parecer CredIA ainda não gerado para esta escoragem.")
+        st.markdown('<div class="credia-action">', unsafe_allow_html=True)
+        st.markdown('<div class="credia-btn">', unsafe_allow_html=True)
+        if st.button(
+            "Gerar parecer CredIA",
+            key=f"btn_generate_credia_{client_id}",
+            type="primary",
+            use_container_width=True,
+        ):
+            with st.spinner("Gerando parecer CredIA..."):
+                try:
+                    _run_ai_commentary(result)
+                except ConnectionError as exc:
+                    st.error(str(exc))
+                except RuntimeError as exc:
+                    status, _ = _parse_http_error(exc)
+                    st.error(f"Falha ao gerar CredIA (HTTP {status}): {exc}")
+                else:
+                    st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     applied_overrides = result.get("applied_overrides") or {}
     with st.expander("Simulação aplicada"):

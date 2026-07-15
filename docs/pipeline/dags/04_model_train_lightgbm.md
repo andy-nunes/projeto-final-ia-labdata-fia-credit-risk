@@ -14,6 +14,7 @@ modelo no MinIO.
 - Tags: `credit-risk`, `model`, `lightgbm`, `training`
 - Arquivo: `dags/04_model_train_lightgbm.py`
 - Script importado: `scripts/train.py`
+- Encadeamento: ao final dispara `05_monitor_health` via `TriggerDagRunOperator`
 
 ## Dependencias
 
@@ -31,7 +32,7 @@ Saidas:
 
 - `s3://artifacts/lightgbm_hcdr.pkl`
 - `s3://artifacts/model_metadata.json`
-- `Dados/abt/abt_demo_holdout.parquet`
+- `s3://abt/abt_demo_holdout.parquet`
 
 Variaveis no servico `airflow`:
 
@@ -63,7 +64,7 @@ Quando executada, a DAG:
 2. Le a ABT final do bucket `abt`.
 3. Separa a base em treino, teste e holdout de demonstracao, mantendo
    estratificacao por `TARGET`.
-4. Salva o holdout de demonstracao em `Dados/abt/abt_demo_holdout.parquet`.
+4. Salva o holdout de demonstracao em `s3://abt/abt_demo_holdout.parquet`.
 5. Treina o `LightGBMClassifier` com os parametros de `Model/model_config.yaml`.
 6. Avalia o modelo no conjunto de teste.
 7. Publica o modelo serializado no bucket `artifacts`.
@@ -100,17 +101,17 @@ Conferir artefatos no MinIO:
 docker compose run --rm minio-client ls --recursive local/artifacts
 ```
 
-Conferir o holdout local:
+Conferir o holdout no MinIO:
 
 ```bash
-ls -lh Dados/abt/abt_demo_holdout.parquet
+docker compose run --rm minio-client stat local/abt/abt_demo_holdout.parquet
 ```
 
 Resultado esperado:
 
 - A task `run_training_script` fica em estado `success`.
 - O bucket `artifacts` contem `lightgbm_hcdr.pkl` e `model_metadata.json`.
-- O arquivo `Dados/abt/abt_demo_holdout.parquet` e atualizado.
+- O objeto `s3://abt/abt_demo_holdout.parquet` e atualizado.
 
 ## Observacoes
 

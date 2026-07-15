@@ -16,13 +16,16 @@ from botocore.client import Config
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from scripts.integrations_config import get_integrations_config
+
 
 DAYS_EMPLOYED_ANOMALY = 365243
 MAX_EMPLOYMENT_DAYS = 18250
 BUREAU_STATUS_VALID = frozenset({"C", "X", "0", "1", "2", "3", "4", "5"})
-RAW_BUCKET = os.getenv("RAW_BUCKET", "raw")
+INTEGRATIONS = get_integrations_config()
+RAW_BUCKET = INTEGRATIONS.minio.raw_bucket
 CLEAN_BUCKET = os.getenv("CLEAN_BUCKET", "clean")
-MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
+MINIO_ENDPOINT_URL = INTEGRATIONS.minio.endpoint_url
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
 

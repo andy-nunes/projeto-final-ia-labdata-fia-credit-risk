@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from html import escape
 from typing import Any
 
@@ -18,7 +19,8 @@ def _render_stat_card_html(
     safe_tone = tone if tone in {"success", "warning", "danger", "neutral"} else "neutral"
     note_html = ""
     if note:
-        note_html = f'<div class="stat-card-note">{escape(str(note))}</div>'
+        note_body = escape(str(note)).replace("\n", "<br>")
+        note_html = f'<div class="stat-card-note">{note_body}</div>'
     return (
         f'<div class="stat-card stat-card-{safe_tone}">'
         f'<div class="stat-card-label">{escape(str(label))}</div>'
@@ -66,6 +68,121 @@ def _render_triage_queue_html(
         f"{path_html}"
         f"</div>"
     )
+
+
+def _render_ai_commentary_html(ai_commentary: dict[str, Any]) -> str:
+    """Card textual com recomendação IA e reforço de governança."""
+    available = bool(ai_commentary.get("available", True))
+    status_message = escape(str(ai_commentary.get("message", "CredIA indisponível.")))
+    if not available:
+        audit = ai_commentary.get("audit") if isinstance(ai_commentary.get("audit"), dict) else {}
+        tech_error = ""
+        if isinstance(audit, dict) and audit.get("error"):
+            tech_error = (
+                f'<p class="ai-line"><strong>Detalhe técnico:</strong> '
+                f'{escape(str(audit.get("error")))}</p>'
+            )
+        return (
+            '<div class="ai-card">'
+            '<div class="ai-kicker">CredIA</div>'
+            '<div class="ai-title">CredIA indisponível</div>'
+            f'<p class="ai-line">{status_message}</p>'
+            f"{tech_error}"
+            '<p class="ai-guardrail">Análise segue com fatores do modelo e decisão humana.</p>'
+            "</div>"
+        )
+
+    summary = escape(str(ai_commentary.get("summary", "Não informado.")))
+    insights = ai_commentary.get("insights")
+    insight_items = ""
+    if isinstance(insights, list) and insights:
+        insight_items = "".join(
+            f"<li>{escape(str(item))}</li>"
+            for item in insights[:4]
+            if str(item).strip()
+        )
+    if not insight_items:
+        insight_items = "<li>Sem insights adicionais nesta execução.</li>"
+    checks = ai_commentary.get("recommended_checks")
+    check_items = ""
+    if isinstance(checks, list) and checks:
+        check_items = "".join(
+            f"<li>{escape(str(item))}</li>"
+            for item in checks[:5]
+            if str(item).strip()
+        )
+    if not check_items:
+        check_items = "<li>Sem checklist adicional nesta execução.</li>"
+
+    manager_brief_html = _simple_markdown_to_html(
+        str(ai_commentary.get("manager_brief_md") or "")
+    )
+
+    return (
+        '<div class="ai-card">'
+        '<div class="ai-kicker">CredIA</div>'
+        '<div class="ai-title">Crédito + IA para apoio à decisão</div>'
+        f'<p class="ai-line"><strong>Resumo:</strong> {summary}</p>'
+        '<div class="ai-subtitle">Insights de apoio</div>'
+        f'<ul class="ai-alerts">{insight_items}</ul>'
+        f'<div class="ai-brief">{manager_brief_html}</div>'
+        '<div class="ai-subtitle">Checklist sugerido pelo CredIA</div>'
+        f'<ul class="ai-alerts">{check_items}</ul>'
+        "</div>"
+    )
+
+
+def _simple_markdown_to_html(markdown_text: str) -> str:
+    """Converte markdown básico para HTML seguro dentro do card CredIA."""
+    text = (markdown_text or "").strip()
+    if not text:
+        return ""
+
+    html_parts: list[str] = []
+    in_list = False
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            continue
+
+        heading_match = re.match(r"^(#{1,6})\s*(.+)$", line)
+        if heading_match:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            heading = _format_inline_markdown(heading_match.group(2).strip())
+            html_parts.append(f'<div class="ai-md-heading">{heading}</div>')
+            continue
+
+        if line.startswith(("- ", "* ")):
+            if not in_list:
+                html_parts.append('<ul class="ai-md-list">')
+                in_list = True
+            html_parts.append(f"<li>{_format_inline_markdown(line[2:].strip())}</li>")
+            continue
+
+        if in_list:
+            html_parts.append("</ul>")
+            in_list = False
+        html_parts.append(
+            f'<p class="ai-md-paragraph">{_format_inline_markdown(line)}</p>'
+        )
+
+    if in_list:
+        html_parts.append("</ul>")
+    return "".join(html_parts)
+
+
+def _format_inline_markdown(text: str) -> str:
+    """Aplica markdown inline básico de forma segura para o card CredIA."""
+    safe = escape(text)
+    safe = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", safe)
+    safe = re.sub(r"\*(.+?)\*", r"<em>\1</em>", safe)
+    safe = re.sub(r"`(.+?)`", r"<code>\1</code>", safe)
+    return safe
 
 
 def _risk_band_tone(risk_band_value: Any) -> str:

@@ -116,9 +116,11 @@ Arquivo: [`MLOps/docker-compose.yml`](docker-compose.yml) (symlink para a raiz).
 
 ### Pré-requisito (ingestão Bronze)
 
-Token Kaggle em `~/.kaggle/access_token` ([settings/api](https://www.kaggle.com/settings/api)
-→ *Generate New Token*). A pasta `~/.kaggle` é montada no container do Airflow;
-o script `kagglehub` usa esse token para baixar a competição.
+Token Kaggle em `~/.config/fia-credit-risk/kaggle/kaggle.env`
+([settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*),
+no formato `KAGGLE_API_TOKEN=<seu-token>`.
+O `docker-compose.override.yml` carrega esse arquivo como `env_file` para
+`dev` e `airflow` (`required: false`).
 
 ### Subir o ambiente
 
@@ -132,7 +134,7 @@ Aguarde 1–2 minutos para o Airflow concluir `db migrate` e `dags reserialize`.
 ### Executar o pipeline (Airflow)
 
 1. Acesse `http://localhost:8080`.
-2. Despause as quatro DAGs e dispare **apenas** `01_bronze_ingest_kaggle`; as
+2. Despause as cinco DAGs e dispare **apenas** `01_bronze_ingest_kaggle`; as
    demais são acionadas automaticamente.
 
 Equivalente CLI:
@@ -142,8 +144,12 @@ docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
 docker compose exec -T airflow airflow dags unpause 02_silver_clean_data
 docker compose exec -T airflow airflow dags unpause 03_gold_abt_features
 docker compose exec -T airflow airflow dags unpause 04_model_train_lightgbm
+docker compose exec -T airflow airflow dags unpause 05_monitor_health
 docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
+
+A DAG `05_monitor_health` também roda a cada 5 minutos enquanto o `trained_at`
+do modelo estiver nas últimas 24h.
 
 ### Orquestração fora do Airflow
 
@@ -196,7 +202,7 @@ Documento teórico:
 |---|---|
 | Script | `scripts/mlops_monitoring.py` |
 | Config drift (PSI) | `DataPipeline/pipeline_config.yaml` → seção `monitoring` |
-| DAG | `05_monitor_health` |
+| DAG | `05_monitor_health` (pós-treino + a cada 5 min com freshness 24h) |
 | Relatório | `s3://artifacts/monitoring/latest.json` |
 | API | `GET /monitoring/latest`, `POST /monitoring/run` |
 
@@ -258,13 +264,84 @@ curl -sS -X POST http://localhost:8000/score \
 docker compose run --rm minio-client cat local/artifacts/automation/latest.json
 ```
 
-### Proposta técnica (roadmap)
+### CredIA (implementado)
 
-- Agentes de IA/LLM para gerar parecer em linguagem natural, explicações
-  contextualizadas e apoio ao analista de crédito.
-- Consumo dos eventos já publicados em `s3://artifacts/automation/` como trilha
-  de auditoria e gatilho de contexto.
-- Continuidade do princípio de governança: **humano no loop** para decisão final.
+| Peça | Caminho |
+|---|---|
+| Módulo de IA | `app/ai_commentary.py` |
+| Endpoint dedicado | `POST /score/ai-commentary` |
+| Integração UI | `app/ui/mesa.py` (botão `Gerar parecer CredIA`) |
+| Card visual | `app/ui/components.py` + `app/ui/styles.py` |
+
+Comportamento em produção:
+
+- A escoragem `/score` não depende do LLM para manter latência da mesa.
+- O parecer é gerado sob demanda após a escoragem, sem rerodar o modelo.
+- O contexto do CredIA combina:
+  - saída técnica da run (`probability`, `threshold`, fatores locais);
+  - benchmarks da carteira (holdout de demo);
+  - highlights da EDA (`notebooks/01_exp_analysis.ipynb`);
+  - dicionário técnico→negócio para linguagem executiva.
+- Se houver indisponibilidade do Gemini, o card informa status/erro técnico e
+  mantém a decisão humana obrigatória.
+
+Configuração:
+
+```bash
+GEMINI_API_KEY=<sua-chave>
+GEMINI_MODEL=gemini-flash-lite-latest
+GEMINI_MODEL_FALLBACKS=gemini-2.0-flash-lite,gemini-2.5-flash-lite
+```
+
+---
+
+## Próximos passos de desenvolvimento (iii e iv)
+
+Embora monitoramento e automação já estejam operacionais, a evolução contínua
+do motor prevê os seguintes incrementos para ciclos futuros.
+
+### (iii) Monitoramento — roadmap
+
+**Curto prazo**
+
+- Persistir histórico de monitoramento por data/hora (não apenas `latest.json`)
+  para facilitar auditoria temporal.
+- Adicionar alertas ativos (Slack/e-mail/webhook) quando PSI ou disponibilidade
+  ultrapassarem limites críticos.
+- Expandir o contrato de dados com checks de nullability, ranges e categorias
+  obrigatórias por feature crítica.
+
+**Médio prazo**
+
+- Incluir monitoramento de performance pós-decisão (realizado x previsto) com
+  janela móvel por safra de concessão.
+- Versionar baseline de monitoramento por versão de modelo para comparação
+  entre releases.
+- Publicar painel executivo de saúde (SLA, drift, qualidade e estabilidade) para
+  acompanhamento da operação.
+
+### (iv) Automação e agentes de IA — roadmap
+
+**Curto prazo**
+
+- Adicionar política de fila por segmento (ex.: renda/faixa de risco) para
+  priorização operacional da mesa.
+- Implementar trilha de aprovação humana no webhook (status, responsável e
+  justificativa) para governança ponta a ponta.
+- Padronizar playbooks automáticos por fila (`autoaprovacao`, `mesa_analise`,
+  `recusa_candidata`) com checklist de compliance.
+
+**Médio prazo**
+
+- Evoluir o CredIA para recomendação orientada por política de crédito (ação
+  sugerida + evidências de suporte), mantendo humano no loop.
+- Acoplar feedback da decisão final da mesa para aprendizado de políticas e
+  recalibração de thresholds.
+- Implementar mecanismo de champion-challenger para comparar estratégias de
+  régua de aprovação sem risco operacional direto.
+
+Esses próximos passos mantêm o projeto aderente ao enunciado (iii e iv) e
+demonstram maturidade de operação contínua além do MVP entregue.
 
 ---
 

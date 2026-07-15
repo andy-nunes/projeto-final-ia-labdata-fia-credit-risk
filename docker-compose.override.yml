@@ -1,0 +1,35 @@
+services:
+  dev:
+    env_file:
+      - path: ${HOME}/.config/fia-credit-risk/kaggle/kaggle.env
+        required: false
+      - path: ${HOME}/.config/fia-credit-risk/minio/minio.env
+        required: false
+
+  airflow:
+    env_file:
+      - path: ${HOME}/.config/fia-credit-risk/kaggle/kaggle.env
+        required: false
+      - path: ${HOME}/.config/fia-credit-risk/minio/minio.env
+        required: false
+      - path: ${HOME}/.config/fia-credit-risk/airflow/airflow.env
+        required: false
+
+  minio:
+    env_file:
+      - path: ${HOME}/.config/fia-credit-risk/minio/minio.env
+        required: false
+
+  api:
+    env_file:
+      - path: ${HOME}/.config/fia-credit-risk/gemini/gemini.env
+        required: false
+      - path: ${HOME}/.config/fia-credit-risk/minio/minio.env
+        required: false
+
+  streamlit:
+    env_file:
+      - path: ${HOME}/.config/fia-credit-risk/gemini/gemini.env
+        required: false
+      - path: ${HOME}/.config/fia-credit-risk/minio/minio.env
+        required: false

@@ -8,34 +8,17 @@ import boto3
 import kagglehub
 from botocore.client import Config
 
-
-COMPETITION_NAME = "home-credit-default-risk"
-RAW_BUCKET = os.getenv("RAW_BUCKET", "raw")
-MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
-MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
-MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
-PROJECT_BUCKETS: tuple[str, ...] = ("raw", "clean", "abt", "artifacts")
-EXPECTED_RAW_FILES: tuple[str, ...] = (
-    "HomeCredit_columns_description.csv",
-    "POS_CASH_balance.csv",
-    "application_test.csv",
-    "application_train.csv",
-    "bureau.csv",
-    "bureau_balance.csv",
-    "credit_card_balance.csv",
-    "installments_payments.csv",
-    "previous_application.csv",
-    "sample_submission.csv",
-)
+from scripts.integrations_config import get_integrations_config
 
 
 def get_minio_client():
     """Cria um cliente S3 configurado para o MinIO local."""
+    config = get_integrations_config()
     return boto3.client(
         "s3",
-        endpoint_url=MINIO_ENDPOINT_URL,
-        aws_access_key_id=MINIO_ROOT_USER,
-        aws_secret_access_key=MINIO_ROOT_PASSWORD,
+        endpoint_url=config.minio.endpoint_url,
+        aws_access_key_id=os.getenv("MINIO_ROOT_USER", "minioadmin"),
+        aws_secret_access_key=os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"),
         config=Config(signature_version="s3v4"),
         region_name="us-east-1",
     )
@@ -43,8 +26,9 @@ def get_minio_client():
 
 def ensure_buckets(client) -> None:
     """Garante que os buckets padrao do projeto existem no MinIO."""
+    config = get_integrations_config()
     existing = {bucket["Name"] for bucket in client.list_buckets().get("Buckets", [])}
-    for bucket in PROJECT_BUCKETS:
+    for bucket in config.minio.project_buckets:
         if bucket not in existing:
             client.create_bucket(Bucket=bucket)
 
@@ -102,35 +86,45 @@ def upload_expected_csv_files(
 
 def missing_expected_files(client, bucket: str) -> list[str]:
     """Retorna os arquivos esperados que ainda nao existem no bucket."""
+    config = get_integrations_config()
     existing = list_bucket_keys(client, bucket)
-    return sorted(file_name for file_name in EXPECTED_RAW_FILES if file_name not in existing)
+    return sorted(
+        file_name
+        for file_name in config.kaggle.expected_raw_files
+        if file_name not in existing
+    )
 
 
 def replace_kaggle_raw_files() -> dict[str, object]:
     """Baixa a competicao Kaggle e substitui os CSVs esperados no bucket raw."""
+    config = get_integrations_config()
+    raw_bucket = config.minio.raw_bucket
     client = get_minio_client()
     ensure_buckets(client)
 
     with TemporaryDirectory() as tmpdir:
         download_dir = Path(tmpdir)
         source_path = Path(
-            kagglehub.competition_download(COMPETITION_NAME, output_dir=str(download_dir))
+            kagglehub.competition_download(
+                config.kaggle.competition_name,
+                output_dir=str(download_dir),
+            )
         )
         replaced_files = upload_expected_csv_files(
             client,
             source_path,
-            RAW_BUCKET,
-            EXPECTED_RAW_FILES,
+            raw_bucket,
+            config.kaggle.expected_raw_files,
         )
 
-    missing_files = missing_expected_files(client, RAW_BUCKET)
+    missing_files = missing_expected_files(client, raw_bucket)
     if missing_files:
         raise RuntimeError(
             "Bucket raw is still missing expected files: " + ", ".join(missing_files)
         )
 
     return {
-        "bucket": RAW_BUCKET,
+        "bucket": raw_bucket,
         "replaced": replaced_files,
         "skipped": False,
         "missing_after_upload": [],

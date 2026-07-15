@@ -23,11 +23,14 @@ Servicos:
 
 Credenciais e variaveis:
 
-- O container do Airflow monta `~/.kaggle` em `/home/airflow/.kaggle`
-  (somente leitura). O `kagglehub` autentica com `access_token` nessa pasta
-  ou com a variável de ambiente `KAGGLE_API_TOKEN`.
+- O container do Airflow recebe `KAGGLE_API_TOKEN` por variável de ambiente.
+- Recomenda-se manter o token em
+  `~/.config/fia-credit-risk/kaggle/kaggle.env` e carregar via
+  `docker-compose.override.yml` (`env_file`).
 - Token: gere em [kaggle.com/settings/api](https://www.kaggle.com/settings/api)
-  (*Generate New Token*) e salve em `~/.kaggle/access_token`.
+  (*Generate New Token*) e salve como
+  `KAGGLE_API_TOKEN=<seu-token>` no arquivo
+  `~/.config/fia-credit-risk/kaggle/kaggle.env`.
 - `MINIO_ENDPOINT_URL`, padrao `http://minio:9000`.
 - `MINIO_ROOT_USER`, padrao `minioadmin`.
 - `MINIO_ROOT_PASSWORD`, padrao `minioadmin`.

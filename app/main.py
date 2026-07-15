@@ -19,6 +19,7 @@ from scripts.mlops_monitoring import (
 )
 from scripts.model_config import get_model_config
 from scripts.predict import predict_by_client_id, fetch_client_data_by_id
+from app.ai_commentary import build_ai_commentary
 
 _CONFIG = get_model_config()
 
@@ -43,6 +44,15 @@ class ClientRequest(BaseModel):
         default=True,
         description="Se true, publica evento de triagem no MinIO após o score.",
     )
+    emit_ai_commentary: bool = Field(
+        default=False,
+        description="Se true, gera parecer IA com guardrails para apoiar o gerente.",
+    )
+
+
+class AICommentaryRequest(BaseModel):
+    """Payload para gerar parecer IA a partir de um score já calculado."""
+    score_payload: Dict[str, Any]
 
 
 class AutomationWebhookRequest(BaseModel):
@@ -114,11 +124,29 @@ def get_score(request: ClientRequest):
                         "human_in_the_loop": True,
                     },
                 }
+        if request.emit_ai_commentary:
+            resultado = {
+                **resultado,
+                "ai_commentary": build_ai_commentary(resultado),
+            }
         return resultado
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro de inferência: {str(e)}")
+
+
+@app.post("/score/ai-commentary")
+def get_score_ai_commentary(request: AICommentaryRequest):
+    """Gera parecer CredIA sob demanda sem rerodar a escoragem."""
+    try:
+        score_payload = dict(request.score_payload or {})
+        score_payload.pop("ai_commentary", None)
+        return {"ai_commentary": build_ai_commentary(score_payload)}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Falha ao gerar parecer CredIA: {str(e)}"
+        ) from e
 
 
 @app.post("/webhooks/credit-decision")

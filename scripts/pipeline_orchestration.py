@@ -2,7 +2,7 @@
 
 Em produção local a orquestração oficial fica nas DAGs Airflow:
 ``01_bronze_ingest_kaggle`` → ``02_silver_clean_data`` → ``03_gold_abt_features``
-→ ``04_model_train_lightgbm``.
+→ ``04_model_train_lightgbm`` → ``05_monitor_health``.
 
 Este script permite executar a mesma cadeia fora do Airflow, na ordem:
 ingestão Kaggle (opcional) → data_sanitization → abt_transform → train.

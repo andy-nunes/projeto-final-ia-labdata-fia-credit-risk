@@ -22,7 +22,7 @@ operacional** presente no repositório.
 | Performance baseline (decay proxy) | ✅ Implementado | `check_performance_baseline` |
 | Triagem pós-escoragem (filas MinIO) | ✅ Implementado | `scripts/credit_automation.py` |
 | Webhook de decisão | ✅ Implementado | `POST /webhooks/credit-decision` |
-| Agentes LLM (parecer em linguagem natural) | 🔜 Evolução futura | Proposta abaixo (item iv) |
+| CredIA (parecer em linguagem natural) | ✅ Implementado | `app/ai_commentary.py`, `POST /score/ai-commentary` |
 | Alertas contínuos / PSI em janela viva | 🔜 Evolução futura | Runbook + Airflow agendado |
 
 ---
@@ -106,7 +106,7 @@ Sem rótulo imediato, usar *proxies*:
 
 ### Encaixe na arquitetura atual
 
-1. **Airflow** — DAG `05_monitor_health` (manual; evolução: schedule periódico).
+1. **Airflow** — DAG `05_monitor_health` (pós-treino + schedule a cada 5 min com freshness de 24h sobre `04_model_train_lightgbm`).
 2. **MinIO** — relatórios em `s3://artifacts/monitoring/`.
 3. **Metadata do modelo** — linha de base oficial de métricas e threshold.
 4. **Dashboard / API** — aba Monitoramento MLOps + endpoints `/monitoring/*`.
@@ -137,13 +137,18 @@ Faixas (threshold `t` = 0,08):
 - `0.4·t ≤ proba < t` → `mesa_analise`
 - `proba ≥ t` → `recusa_candidata`
 
-### Evolução com agentes de IA (proposta)
+### CredIA em produção (assistente de mesa)
 
-1. **Agente de triagem** — resume fatores XAI e sugere faixa com justificativa auditável.
-2. **Dossiê assistido** — parecer em linguagem de negócio para zona cinzenta (What-If).
-3. **Alerta de carteira** — correlaciona drift com mudanças de campanha ou modelo.
-4. **Comitê de promoção de modelo** — compara metadata antigo vs. novo antes do deploy.
-5. **Conformidade sob demanda** — responde “por que recusado?” a partir do pacote XAI persistido.
+1. **Execução sob demanda** — a escoragem ocorre primeiro e o parecer IA é
+   acionado depois via `POST /score/ai-commentary` (sem rerodar o modelo).
+2. **Contexto enriquecido** — combina score da run, fatores locais, benchmark da
+   carteira (holdout), highlights da EDA e rótulos de negócio das features.
+3. **UX orientada ao gerente** — card único no dashboard com resumo, insights,
+   checklist e auditoria técnica colapsável.
+4. **Resiliência** — fallback entre modelos Gemini em picos de demanda (HTTP 503)
+   mantendo transparência de indisponibilidade.
+5. **Governança** — decisão final humana obrigatória e rastreio dos metadados do
+   parecer (`provider`, `model`, `status`, `generated_at`).
 
 ### Princípios de desenho (para a banca)
 
@@ -162,9 +167,9 @@ Faixas (threshold `t` = 0,08):
 | Item do enunciado | Natureza nesta entrega | Conteúdo |
 |---|---|---|
 | iii Monitoramento | Implementação mínima + runbook | Saúde, artefatos, PSI/drift, schema, baseline de métricas |
-| iv Automação e agentes | Triagem implementada + proposta LLM | Filas MinIO, webhook, humano no loop; agentes como evolução |
+| iv Automação e agentes | Triagem + CredIA implementados | Filas MinIO, webhook, parecer sob demanda e humano no loop |
 
 A infraestrutura materializa a esteira de dados, o modelo, o serviço de predição
 e a interface da mesa. Os itens iii e iv fecham o ciclo MLOps com monitoramento
-operacional e automação de triagem auditável, deixando agentes conversacionais
-como evolução natural sobre os eventos já publicados no lake.
+operacional, triagem auditável e assistente CredIA em produção, sempre com
+decisão final humana.

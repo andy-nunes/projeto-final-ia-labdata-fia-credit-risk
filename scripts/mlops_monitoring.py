@@ -22,6 +22,7 @@ import pandas as pd
 import s3fs
 import yaml
 
+from scripts.integrations_config import get_integrations_config
 from scripts.model_config import get_model_config, load_model_metadata
 
 
@@ -30,7 +31,6 @@ LOGGER = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_CONFIG_PATH = REPO_ROOT / "DataPipeline" / "pipeline_config.yaml"
 
-MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
 API_HEALTH_URL = os.getenv("API_HEALTH_URL", "http://api:8000/")
@@ -339,10 +339,11 @@ def check_performance_baseline(fs: s3fs.S3FileSystem | None = None) -> dict[str,
 
 def get_s3_filesystem() -> s3fs.S3FileSystem:
     """Cria filesystem S3 apontando para o MinIO."""
+    endpoint_url = get_integrations_config().minio.endpoint_url
     return s3fs.S3FileSystem(
         key=MINIO_ROOT_USER,
         secret=MINIO_ROOT_PASSWORD,
-        client_kwargs={"endpoint_url": MINIO_ENDPOINT_URL},
+        client_kwargs={"endpoint_url": endpoint_url},
     )
 
 

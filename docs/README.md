@@ -8,7 +8,7 @@ Home Credit Default Risk.
 - [`architecture/ambiente-docker-e-dados.md`](architecture/ambiente-docker-e-dados.md):
   ambiente Docker, servicos, volumes e dados locais.
 - [`architecture/mlops-monitoramento-e-automacao.md`](architecture/mlops-monitoramento-e-automacao.md):
-  proposta de monitoramento (iii) e automacao / agentes de IA (iv).
+  monitoramento (iii), automacao e CredIA em producao (iv).
 - [`architecture/arquitetura-mlops-home-credit.png`](architecture/arquitetura-mlops-home-credit.png)
   e [`SVG`](architecture/arquitetura-mlops-home-credit.svg): diagrama da solucao.
 
@@ -36,6 +36,8 @@ Home Credit Default Risk.
   variaveis da ABT no Streamlit.
 - [`operations/minio-client.md`](operations/minio-client.md): inspecao e copia de
   objetos no MinIO.
+- [`handoff-dashboard-performance.md`](handoff-dashboard-performance.md):
+  guia rapido de leitura da aba de performance do dashboard.
 
 ## Referencia
 

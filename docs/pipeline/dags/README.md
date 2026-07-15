@@ -1,9 +1,11 @@
 # DAGs
 
-Esta pasta documenta as DAGs Airflow do projeto. Todas as DAGs atuais sao
-manuais (`schedule=None`). A esteira Medalhão encadeia automaticamente
-Bronze → Silver → Gold → Model via `TriggerDagRunOperator`; basta despausar
-as quatro DAGs e disparar `01_bronze_ingest_kaggle`.
+Esta pasta documenta as DAGs Airflow do projeto. A esteira Medalhão
+(Bronze → Silver → Gold → Model) e o monitoramento pós-treino são manuais
+ou encadeados via `TriggerDagRunOperator`, com exceção de
+`05_monitor_health`, que também roda a cada 5 minutos enquanto o treino
+estiver fresco (24h). Basta despausar as cinco DAGs e disparar
+`01_bronze_ingest_kaggle`.
 
 A arquitetura, a semantica de QA, o staging e a execucao direta da camada
 Silver estao detalhados em [`docs/pipeline/camada-silver.md`](../camada-silver.md).
@@ -25,9 +27,11 @@ projeto fica em `scripts/` e deve ser importado pelas DAGs quando necessario.
   `clean` em uma ABT validada no bucket `abt`, com sete TaskGroups e 17 tasks
   sequenciais; ao final dispara `04_model_train_lightgbm`.
 - [`04_model_train_lightgbm`](04_model_train_lightgbm.md): treina o modelo a partir da ABT no
-  bucket `abt` e publica modelo e metadados no bucket `artifacts` (fim da esteira).
+  bucket `abt`, publica artefatos no bucket `artifacts` e dispara
+  `05_monitor_health`.
 - [`05_monitor_health`](05_monitor_health.md): monitoramento mínimo (API + artefatos
-  MinIO + coerência de threshold); publica `s3://artifacts/monitoring/latest.json`.
+  MinIO + coerência de threshold) a cada 5 min com freshness de 24h sobre o
+  treino; publica `s3://artifacts/monitoring/latest.json`.
 
 ## Comandos uteis
 
