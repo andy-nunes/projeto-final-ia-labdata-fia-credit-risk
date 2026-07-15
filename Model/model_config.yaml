@@ -134,10 +134,8 @@ api:
   base_url: http://host.docker.internal:8000
 
 minio:
-  # Credenciais e endpoint para o armazenamento de objetos compatível com S3
+  # Endpoint de rede do MinIO (credenciais via env: MINIO_ROOT_USER/MINIO_ROOT_PASSWORD)
   endpoint_url: http://minio:9000
-  key: minioadmin
-  secret: minioadmin
 
 metadata:
   # Versionamento e documentação do artefato gerado para rastreabilidade

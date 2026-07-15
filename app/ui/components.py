@@ -19,7 +19,8 @@ def _render_stat_card_html(
     safe_tone = tone if tone in {"success", "warning", "danger", "neutral"} else "neutral"
     note_html = ""
     if note:
-        note_html = f'<div class="stat-card-note">{escape(str(note))}</div>'
+        note_body = escape(str(note)).replace("\n", "<br>")
+        note_html = f'<div class="stat-card-note">{note_body}</div>'
     return (
         f'<div class="stat-card stat-card-{safe_tone}">'
         f'<div class="stat-card-label">{escape(str(label))}</div>'

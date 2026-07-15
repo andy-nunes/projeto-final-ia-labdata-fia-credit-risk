@@ -4,7 +4,7 @@ from app import ai_commentary
 
 
 def test_build_ai_commentary_reports_unavailable_without_api_key(monkeypatch) -> None:
-    monkeypatch.setattr(ai_commentary, "_GEMINI_API_KEY", "")
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     payload = {
         "sk_id_curr": 123,
         "probability": 0.22,
@@ -25,14 +25,18 @@ def test_build_ai_commentary_reports_unavailable_without_api_key(monkeypatch) ->
 
 
 def test_build_ai_commentary_uses_llm_with_expected_shape(monkeypatch) -> None:
-    monkeypatch.setattr(ai_commentary, "_GEMINI_API_KEY", "fake-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
 
     def _fake_call(
         _: dict[str, object],
         *,
         model_name: str,
+        gemini_api_key: str,
+        gemini_config,
     ) -> dict[str, object]:
         assert model_name
+        assert gemini_api_key == "fake-key"
+        assert gemini_config.model
         return {
             "summary": "S" * 460,
             "insights": ["Insight 1", "Insight 2"],

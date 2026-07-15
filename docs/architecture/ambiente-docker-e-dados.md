@@ -54,7 +54,6 @@ Principais bibliotecas instaladas:
 - `matplotlib`
 - `seaborn`
 - `jupyterlab`
-- `python-dotenv`
 - `pyarrow`
 - `streamlit`
 - `boto3`
@@ -79,9 +78,10 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
 ### Primeiros passos
 
 1. Instale Docker e Docker Compose na maquina local.
-2. Configure o token da API Kaggle em `~/.kaggle/access_token` (gerado em
+2. Configure o token da API Kaggle em
+   `~/.config/fia-credit-risk/kaggle/kaggle.env` (gerado em
    [kaggle.com/settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*).
-   A ingestão usa `kagglehub`, que lê esse arquivo ou a variável `KAGGLE_API_TOKEN`.
+   A ingestão usa `kagglehub` com a variável `KAGGLE_API_TOKEN`.
 3. Rode `docker compose build`.
 4. Suba os servicos com `docker compose up -d minio airflow api streamlit`.
 5. Acesse Airflow, MinIO, API e Streamlit nos enderecos locais.
@@ -94,8 +94,8 @@ O `docker-compose.yml` define os servicos `dev`, `airflow`, `minio`,
 Comportamento do servico `dev`:
 
 - Monta o repositorio local em `/app`.
-- Monta `~/.kaggle` em `/root/.kaggle` como somente leitura (token em
-  `access_token`).
+- Carrega `~/.config/fia-credit-risk/kaggle/kaggle.env` como `env_file` no
+  `docker-compose.override.yml` (opcional, `required: false`).
 - Define `PYTHONPATH=/app`.
 - Abre `bash` por padrao.
 
@@ -103,7 +103,8 @@ Comportamento do servico `streamlit`:
 
 - Sobe `app/dashboard.py` na porta `8501`.
 - Executa `scripts/ensure_minio_buckets.py` antes da aplicacao para garantir
-  os buckets `raw`, `clean`, `abt` e `artifacts`.
+  os buckets definidos em `config/integrations.yaml` (default: `raw`, `clean`,
+  `abt` e `artifacts`).
 - Define `API_BASE_URL=http://api:8000` para consumir a API FastAPI pela rede
   interna do Compose.
 
@@ -111,8 +112,8 @@ Comportamento do servico `api`:
 
 - Sobe `app/main.py` com `uvicorn` na porta `8000`.
 - Carrega o modelo em `s3://artifacts/lightgbm_hcdr.pkl`.
-- Usa o holdout local em `Dados/abt/abt_demo_holdout.parquet` para buscar
-  dossies por `SK_ID_CURR`.
+- Usa o holdout oficial em `s3://abt/abt_demo_holdout.parquet` (override por
+  `DEMO_HOLDOUT_PATH`) para buscar dossies por `SK_ID_CURR`.
 
 Comportamento do servico `airflow`:
 
@@ -534,9 +535,7 @@ docker compose run --rm minio-client stat local/abt/abt_train.parquet
 Consulte [`docs/pipeline/dags/03_gold_abt_features.md`](../pipeline/dags/03_gold_abt_features.md) para o
 grafo, entradas, QA e comportamento operacional.
 
-Ainda nao foram implementados:
+Evoluções futuras (fora do escopo deste documento):
 
-- Treinamento em `Model/train.py`.
-- Predicao em `Model/predict.py`.
-- App Streamlit final de predicao.
-- Componentes adicionais de MLOps.
+- Ampliação das estratégias de monitoramento em produção.
+- Novos fluxos de automação/assistência com agentes de IA.

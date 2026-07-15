@@ -12,20 +12,15 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from scripts.integrations_config import GeminiConfig, get_integrations_config
 from scripts.model_config import get_model_config
 
 _PROMPT_VERSION = "ai_commentary_v1"
-_DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
-_MODEL_FALLBACKS_RAW = os.getenv(
-    "GEMINI_MODEL_FALLBACKS",
-    "gemini-flash-lite-latest,gemini-2.0-flash-lite",
-)
+_DEFAULT_MODEL = "gemini-flash-lite-latest"
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _EDA_NOTEBOOK_PATH = Path(
     os.getenv("EDA_NOTEBOOK_PATH", str(_REPO_ROOT / "notebooks" / "01_exp_analysis.ipynb"))
 )
-_GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-_TIMEOUT_SECONDS = 20
 _MAX_TEXT_CHARS = 420
 _MAX_BRIEF_CHARS = 4500
 _REQUIRED_RESPONSE_KEYS = (
@@ -40,14 +35,13 @@ def _normalize_model_name(model_name: str) -> str:
     normalized = (model_name or "").strip()
     if normalized.startswith("models/"):
         return normalized.split("models/", 1)[1]
-    return normalized or "gemini-3.5-flash"
+    return normalized or _DEFAULT_MODEL
 
 
-def _model_candidates(primary_model: str) -> list[str]:
+def _model_candidates(primary_model: str, model_fallbacks: tuple[str, ...]) -> list[str]:
     primary = _normalize_model_name(primary_model)
-    fallbacks = [item.strip() for item in _MODEL_FALLBACKS_RAW.split(",")]
     models: list[str] = []
-    for model_name in [primary, *fallbacks]:
+    for model_name in [primary, *model_fallbacks]:
         normalized = _normalize_model_name(model_name)
         if normalized and normalized not in models:
             models.append(normalized)
@@ -62,13 +56,16 @@ def _is_retryable_unavailable(exc: Exception) -> bool:
 
 
 def build_ai_commentary(score_payload: dict[str, Any]) -> dict[str, Any]:
+    integrations = get_integrations_config()
+    gemini_config = integrations.gemini
     context = _build_context(score_payload)
     feature_name_map = context.get("feature_name_map") or {}
     generated_at = datetime.now(timezone.utc).isoformat()
-    model_names = _model_candidates(_DEFAULT_MODEL)
+    model_names = _model_candidates(gemini_config.model, gemini_config.model_fallbacks)
     preferred_model = model_names[0]
+    gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
 
-    if not _GEMINI_API_KEY:
+    if not gemini_api_key:
         return _unavailable_commentary(
             message="CredIA indisponível: GEMINI_API_KEY ausente.",
             model=preferred_model,
@@ -81,7 +78,12 @@ def build_ai_commentary(score_payload: dict[str, Any]) -> dict[str, Any]:
     for model_name in model_names:
         tried_models.append(model_name)
         try:
-            llm_result = _call_gemini_with_guardrails(context, model_name=model_name)
+            llm_result = _call_gemini_with_guardrails(
+                context,
+                model_name=model_name,
+                gemini_api_key=gemini_api_key,
+                gemini_config=gemini_config,
+            )
             return _normalize_llm_result(
                 llm_result,
                 generated_at=generated_at,
@@ -111,6 +113,8 @@ def _call_gemini_with_guardrails(
     context: dict[str, Any],
     *,
     model_name: str,
+    gemini_api_key: str,
+    gemini_config: GeminiConfig,
 ) -> dict[str, Any]:
     normalized_model = _normalize_model_name(model_name)
     context_json = json.dumps(context, ensure_ascii=False)
@@ -138,9 +142,9 @@ def _call_gemini_with_guardrails(
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.2,
-            "topP": 0.9,
-            "maxOutputTokens": 900,
+            "temperature": gemini_config.generation.temperature,
+            "topP": gemini_config.generation.top_p,
+            "maxOutputTokens": gemini_config.generation.max_output_tokens,
             "responseMimeType": "application/json",
             "responseSchema": {
                 "type": "OBJECT",
@@ -157,7 +161,7 @@ def _call_gemini_with_guardrails(
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/{normalized_model}"
-        f":generateContent?key={_GEMINI_API_KEY}"
+        f":generateContent?key={gemini_api_key}"
     )
     req = Request(
         url=url,
@@ -166,7 +170,7 @@ def _call_gemini_with_guardrails(
         headers={"Content-Type": "application/json"},
     )
     try:
-        with urlopen(req, timeout=_TIMEOUT_SECONDS) as resp:
+        with urlopen(req, timeout=gemini_config.timeout_seconds) as resp:
             body = json.loads(resp.read().decode("utf-8"))
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
@@ -292,15 +296,13 @@ def _load_portfolio_frame() -> Any | None:
         import pandas as pd
         import s3fs
 
-        cfg = get_model_config()
-        path = cfg.resolve_demo_holdout_path()
+        integrations = get_integrations_config()
+        path = integrations.minio.paths.demo_holdout_path_s3
         if str(path).startswith("s3://"):
             fs = s3fs.S3FileSystem(
                 key=os.getenv("MINIO_ROOT_USER", "minioadmin"),
                 secret=os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"),
-                client_kwargs={
-                    "endpoint_url": os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
-                },
+                client_kwargs={"endpoint_url": integrations.minio.endpoint_url},
             )
             with fs.open(path, "rb") as handle:
                 return pd.read_parquet(handle, engine="pyarrow")

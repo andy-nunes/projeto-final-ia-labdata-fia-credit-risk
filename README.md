@@ -96,11 +96,34 @@ No cabeçalho da aplicação:
 ## Pre-requisitos
 
 1. Docker e Docker Compose instalados.
-2. Token da API Kaggle em `~/.kaggle/access_token` (gerado em
-   [kaggle.com/settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*).
-   Alternativa: variável de ambiente `KAGGLE_API_TOKEN`.
-3. Porta local livre para os servicos principais: `8080`, `9000`, `9001`,
+2. Token da API Kaggle em `~/.config/fia-credit-risk/kaggle/kaggle.env` (gerado em
+   [kaggle.com/settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*),
+   no formato `KAGGLE_API_TOKEN=<seu-token>`.
+3. Copiar `.env.example` para `.env` na raiz e preencher somente segredos locais
+   (ex.: `GEMINI_API_KEY`). Esse é o caminho canônico para o Compose base.
+4. Para segredos locais fora do repositório, o `docker-compose.override.yml`
+   carrega opcionalmente (`required: false`) arquivos em:
+   - `~/.config/fia-credit-risk/gemini/gemini.env`
+   - `~/.config/fia-credit-risk/kaggle/kaggle.env`
+   - `~/.config/fia-credit-risk/minio/minio.env`
+   - `~/.config/fia-credit-risk/airflow/airflow.env`
+5. Porta local livre para os servicos principais: `8080`, `9000`, `9001`,
    `8000` e `8501`.
+
+### Contrato de configuracao das integracoes externas
+
+- Configuracao nao sensivel de Kaggle, MinIO e Gemini fica versionada em
+  `config/integrations.yaml`.
+- Segredos continuam fora do repositório (`GEMINI_API_KEY`,
+  `KAGGLE_API_TOKEN`, credenciais MinIO por env).
+- Precedencia de resolucao: **env > YAML > default interno minimo**.
+- Overwrites MinIO suportados por env:
+  - endpoint/buckets do loader central: `MINIO_ENDPOINT_URL`, `RAW_BUCKET`,
+    `PROJECT_BUCKETS`
+  - credenciais MinIO (segredos): `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`,
+    `MINIO_KEY`, `MINIO_SECRET`
+  - paths de modelagem/serving: `ABT_PATH`, `DEMO_HOLDOUT_PATH`,
+    `MODEL_PATH`, `MODEL_METADATA_PATH`
 
 ### Nota sobre dependências (app x orquestrador)
 
@@ -132,14 +155,19 @@ O Airflow também usa hostname fixo `airflow` e define
 para evitar URLs internas de logs sem host, como `http://:8793/log/...`, em
 ambientes Docker diferentes.
 
+> Limitação conhecida de ambiente local: este projeto usa `LocalExecutor` com
+> banco SQLite para desenvolvimento e demonstração de TCC. Não é uma topologia
+> de alta disponibilidade para produção.
+
 ### 2. Executar o Pipeline de Dados e Treinamento (Airflow)
 
-1. Acesse o orquestrador: **`http://localhost:8080`** (auth local via SimpleAuthManager: `admin` / `admin`).
-2. Despause as quatro DAGs da esteira Medalhão e dispare apenas a primeira; as demais são acionadas automaticamente via `TriggerDagRunOperator`:
+1. Acesse o orquestrador: **`http://localhost:8080`** (auth local via `AIRFLOW_SIMPLE_AUTH_MANAGER_USERS`; default: `admin:admin`).
+2. Despause as DAGs da esteira Medalhão + monitoramento e dispare apenas a primeira; as demais da esteira são acionadas automaticamente via `TriggerDagRunOperator`:
    * `01_bronze_ingest_kaggle` — ingestão dos CSVs brutos no bucket `raw` → dispara Silver
    * `02_silver_clean_data` — padronização e validação no bucket `clean` → dispara Gold
    * `03_gold_abt_features` — feature engineering e ABT no bucket `abt` → dispara treino
-   * `04_model_train_lightgbm` — treinamento a partir de `s3://abt/abt_train.parquet` e exportação do modelo para `s3://artifacts/lightgbm_hcdr.pkl`
+   * `04_model_train_lightgbm` — treinamento a partir de `s3://abt/abt_train.parquet` e exportação do modelo para `s3://artifacts/lightgbm_hcdr.pkl` → dispara monitoramento
+   * `05_monitor_health` — checagens de saúde a cada 5 min (freshness 24h sobre o treino)
 
 Equivalente via CLI:
 
@@ -148,10 +176,12 @@ docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
 docker compose exec -T airflow airflow dags unpause 02_silver_clean_data
 docker compose exec -T airflow airflow dags unpause 03_gold_abt_features
 docker compose exec -T airflow airflow dags unpause 04_model_train_lightgbm
+docker compose exec -T airflow airflow dags unpause 05_monitor_health
 docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
 
-Todas as DAGs são manuais (`schedule=None`); o encadeamento Bronze → Silver → Gold → Model é automático após o trigger inicial.
+O encadeamento Bronze → Silver → Gold → Model → Monitor é automático após o trigger inicial.
+A DAG `05_monitor_health` também roda a cada 5 minutos enquanto o `trained_at` do modelo estiver nas últimas 24h.
 
 Saidas esperadas:
 
@@ -225,7 +255,7 @@ Acesse `http://localhost:8501`. O dashboard consome a API internamente via
 
 ### Configuração do CredIA (Gemini)
 
-No `.env` da raiz:
+Caminho canônico (Compose base): `.env` na raiz do projeto.
 
 ```bash
 GEMINI_API_KEY=<sua-chave>
@@ -233,7 +263,62 @@ GEMINI_MODEL=gemini-flash-lite-latest
 GEMINI_MODEL_FALLBACKS=gemini-2.0-flash-lite,gemini-2.5-flash-lite
 ```
 
+Alternativa opcional (segredo fora do repo): criar
+`~/.config/fia-credit-risk/gemini/gemini.env`; o `docker-compose.override.yml` já
+faz o carregamento com `required: false`.
+
+```bash
+mkdir -p ~/.config/fia-credit-risk/gemini
+cat > ~/.config/fia-credit-risk/gemini/gemini.env <<'EOF'
+GEMINI_API_KEY=<sua-chave>
+GEMINI_MODEL=gemini-flash-lite-latest
+GEMINI_MODEL_FALLBACKS=gemini-2.0-flash-lite,gemini-2.5-flash-lite
+EOF
+chmod 700 ~/.config/fia-credit-risk/gemini
+chmod 600 ~/.config/fia-credit-risk/gemini/gemini.env
+```
+
+### Configuração do Kaggle
+
+Caminho canônico do token no host:
+
+```bash
+mkdir -p ~/.config/fia-credit-risk/kaggle
+cat > ~/.config/fia-credit-risk/kaggle/kaggle.env <<'EOF'
+KAGGLE_API_TOKEN=<seu-token>
+EOF
+chmod 700 ~/.config/fia-credit-risk/kaggle
+chmod 600 ~/.config/fia-credit-risk/kaggle/kaggle.env
+```
+
+O `docker-compose.override.yml` carrega esse arquivo como `env_file` para os
+serviços `dev` e `airflow` (`required: false`).
+
+### Configuração do MinIO e Airflow (local)
+
+Para centralizar credenciais locais fora do repositório:
+
+```bash
+mkdir -p ~/.config/fia-credit-risk/minio ~/.config/fia-credit-risk/airflow
+cat > ~/.config/fia-credit-risk/minio/minio.env <<'EOF'
+MINIO_ENDPOINT_URL=http://minio:9000
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin
+MINIO_KEY=minioadmin
+MINIO_SECRET=minioadmin
+AIRFLOW_CONN_MINIO_DEFAULT=aws://minioadmin:minioadmin@?host=http%3A%2F%2Fminio%3A9000
+EOF
+cat > ~/.config/fia-credit-risk/airflow/airflow.env <<'EOF'
+AIRFLOW_SIMPLE_AUTH_MANAGER_USERS=admin:admin
+EOF
+chmod 700 ~/.config/fia-credit-risk/minio ~/.config/fia-credit-risk/airflow
+chmod 600 ~/.config/fia-credit-risk/minio/minio.env ~/.config/fia-credit-risk/airflow/airflow.env
+```
+
 Observações operacionais:
+
+- Defaults oficiais ficam em `config/integrations.yaml`; as variaveis acima
+  sao overrides opcionais.
 
 - A escoragem (`/score`) roda com baixa latência e **não bloqueia** na IA.
 - O parecer é gerado sob demanda via botão `Gerar parecer CredIA` na Mesa.
@@ -241,6 +326,22 @@ Observações operacionais:
   highlights do notebook `notebooks/01_exp_analysis.ipynb`.
 - Se o Gemini estiver indisponível (ex.: pico de demanda), o card exibe
   indisponibilidade com detalhe técnico e mantém humano no loop.
+
+### Decisões de modelagem e operação (contexto TCC)
+
+- `scale_pos_weight=1.0` no treino (`scripts/train.py`) foi uma decisão de
+  negócio deliberada para evitar aumento excessivo de falsos positivos; o
+  equilíbrio operacional da carteira é controlado via `business_threshold=0.08`.
+- A orquestração oficial de execução é via Airflow (DAGs 01→05). O script
+  `scripts/pipeline_orchestration.py` permanece como alternativa CLI fora do
+  orquestrador.
+- O monitoramento recorrente (`05_monitor_health`) roda em janela de 24h após
+  treino recente; para o escopo do TCC essa política é intencional e pode ser
+  expandida no roadmap.
+- `notebooks/03_train_exploration.ipynb` é artefato exploratório congelado com
+  outputs preservados para banca; não faz parte do runtime de produção.
+- Staging temporário Gold/Silver é removido em execuções bem-sucedidas; sobras
+  podem ocorrer apenas em falhas/interrupções.
 
 ## Próximos passos de desenvolvimento
 

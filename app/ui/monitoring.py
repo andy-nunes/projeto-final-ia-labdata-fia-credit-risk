@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
@@ -18,11 +19,28 @@ from app.ui.components import _render_stat_card_html, _render_triage_queue_html
 from app.ui.session import _set_panel_flag
 
 
+_DISPLAY_TZ = ZoneInfo("America/Sao_Paulo")
+
 _STATUS_LABEL = {
     "ok": ("OK", "success"),
     "warn": ("Atenção", "warning"),
     "fail": ("Falha", "error"),
 }
+
+
+def _format_local_timestamp(value: Any) -> str:
+    """Converte ISO UTC para America/Sao_Paulo sem microssegundos."""
+    if value in (None, "", "—"):
+        return "—"
+    text = str(value).strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return text
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(_DISPLAY_TZ).strftime("%Y-%m-%dT%H:%M:%S")
+
 
 _DOMAIN_ORDER = ("api", "artifacts", "schema", "drift", "performance", "governance")
 _DOMAIN_LABEL = {
@@ -131,14 +149,14 @@ def _render_executive_summary(
     """Renderiza cards executivos para leitura rápida do monitoramento."""
     status_counts = Counter(str(check.get("status", "unknown")).lower() for check in checks)
     overall = str(report.get("overall_status", "unknown")).lower()
-    generated_at = str(report.get("generated_at", "—"))
+    generated_at = _format_local_timestamp(report.get("generated_at", "—"))
 
     summary_cards = [
         _render_stat_card_html(
             "Status geral",
             _STATUS_LABEL.get(overall, (overall.upper(), ""))[0],
             tone=_status_tone(overall),
-            note=f"Atualizado em {generated_at}",
+            note=f"Atualizado em\n{generated_at}",
         ),
         _render_stat_card_html(
             "Checks totais",

@@ -106,7 +106,7 @@ Sem rótulo imediato, usar *proxies*:
 
 ### Encaixe na arquitetura atual
 
-1. **Airflow** — DAG `05_monitor_health` (manual; evolução: schedule periódico).
+1. **Airflow** — DAG `05_monitor_health` (pós-treino + schedule a cada 5 min com freshness de 24h sobre `04_model_train_lightgbm`).
 2. **MinIO** — relatórios em `s3://artifacts/monitoring/`.
 3. **Metadata do modelo** — linha de base oficial de métricas e threshold.
 4. **Dashboard / API** — aba Monitoramento MLOps + endpoints `/monitoring/*`.

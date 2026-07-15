@@ -1,0 +1,35 @@
+kaggle:
+  competition_name: home-credit-default-risk
+  expected_raw_files:
+    - HomeCredit_columns_description.csv
+    - POS_CASH_balance.csv
+    - application_test.csv
+    - application_train.csv
+    - bureau.csv
+    - bureau_balance.csv
+    - credit_card_balance.csv
+    - installments_payments.csv
+    - previous_application.csv
+    - sample_submission.csv
+
+minio:
+  endpoint_url: http://minio:9000
+  raw_bucket: raw
+  project_buckets:
+    - raw
+    - clean
+    - abt
+    - artifacts
+  paths:
+    demo_holdout_path_s3: s3://abt/abt_demo_holdout.parquet
+
+gemini:
+  model: gemini-flash-lite-latest
+  model_fallbacks:
+    - gemini-2.0-flash-lite
+    - gemini-2.5-flash-lite
+  timeout_seconds: 20
+  generation:
+    temperature: 0.2
+    top_p: 0.9
+    max_output_tokens: 900

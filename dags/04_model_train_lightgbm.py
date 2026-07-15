@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, task
 
 from scripts.train import run_training
@@ -21,7 +22,14 @@ def train_lightgbm():
         """Executa o script de treinamento e exporta o modelo."""
         return run_training()
 
-    run_training_task()
+    trigger_monitor_health = TriggerDagRunOperator(
+        task_id="trigger_monitor_health",
+        trigger_dag_id="05_monitor_health",
+        wait_for_completion=False,
+        reset_dag_run=True,
+    )
+
+    run_training_task() >> trigger_monitor_health
 
 
 train_lightgbm()

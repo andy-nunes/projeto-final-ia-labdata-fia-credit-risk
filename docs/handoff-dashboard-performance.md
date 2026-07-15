@@ -1,95 +1,68 @@
-# Handoff — próximo chat: performance e aparência do dashboard
+# Handoff — Dashboard (performance + aparência)
 
-Use este arquivo como contexto inicial no chat novo (`@docs/handoff-dashboard-performance.md`).
+Use este arquivo como contexto inicial em um chat novo (`@docs/handoff-dashboard-performance.md`).
 
-## Status Git (agora)
+## Objetivo
 
-| Item | Valor |
-|------|--------|
-| Repo | `https://github.com/andy-nunes/projeto-final-ia-labdata-fia-credit-risk` |
-| Branch atual | `docs/architecture-and-hmdr-cleanup` |
-| Base | `main` (já contém a reorganização MLOps mergeada: `91222e4`) |
-| Push desta branch | **Ainda não** — commits só locais |
-| Working tree | Limpa (sem mudanças pendentes) |
+Evoluir **performance e aparência** do dashboard Streamlit sem reabrir escopo de arquitetura/pipeline.
 
-### Commits nesta branch (ainda não no remoto)
+## Estado técnico de referência (perene)
 
-1. `d8c0d9b` — Remove refs legadas `HMDR_*` nos docs  
-2. `b5d9647` — Regenera PNG da arquitetura a partir do SVG (dag_ids `01`–`04`)  
-3. `f300f2c` — Rótulos SVG/PNG: `data_sanitization.py` / `abt_transform.py`  
-4. `bb5601b` — Split do dashboard em `app/ui/`  
+- Entry point: `app/dashboard.py`
+- Módulos de UI: `app/ui/`
+  - `styles.py`, `constants.py`, `formatting.py`, `components.py`
+  - `api.py`, `features.py`, `session.py`, `mesa.py`, `performance.py`, `monitoring.py`
+- Catálogo: `app/abt_catalog.py`
 
-## O que já foi feito (auditoria → polish)
+## Contratos que não devem quebrar
 
-### Concluído e na `main`
+- Navegação por abas com `st.tabs` (sem multipage legado).
+- Sem `st.fragment` para navegação.
+- Sem `st.radio` de navegação global.
+- Regras de lazy-load e flags de sessão mantidas.
+- Compatibilidade com `tests/test_dashboard_layout.py`.
 
-- Renomes: `data_sanitization`, `abt_transform`, `train`, `pipeline_orchestration`
-- DAGs alinhadas a `01_bronze` … `04_model_train`
-- `notebooks/`, `scripts/dev/`, docs por domínio
-- Remote do colega (`mattnhb`) removido; só `origin` andy-nunes
-- Feature `dashboard-catalog-tabs` mergeada e deletada
-- Esteira Airflow + API + Streamlit validados pós-rebuild
+## Contexto de performance atual
 
-### Concluído nesta branch (pendente push/PR)
-
-- Docs sem `HMDR_*`
-- Diagrama arquitetura atualizado (SVG + PNG)
-- **Split do dashboard** (Fase 5):
-
-```text
-app/dashboard.py          (~141 linhas, entrypoint)
-app/ui/
-  styles.py, constants.py, formatting.py, components.py
-  api.py, features.py, session.py, mesa.py, performance.py
-```
-
-### Validação recente do split
-
-- Airflow: `80 passed`, 1 skipped  
-- UI: `test_dashboard_layout` + `test_abt_catalog` → `29 passed`
-
-## Assunto do próximo chat
-
-**Performance e aparência do dashboard Streamlit.**
-
-### Contexto de performance (já implementado antes)
-
-Streamlit reexecuta as 3 abas a cada interação. Por isso há **lazy-load**:
+O dashboard usa carregamento sob demanda para reduzir custo de rerun:
 
 | Bloco | Flag / botão | Efeito |
-|-------|----------------|--------|
-| Catálogo | `catalog_ready` / `btn_load_catalog` | Evita markdown gigante a cada rerun da mesa |
-| Dossiê completo | `dossier_table_ready` | DataFrame ABT sob demanda |
-| JSON do score | `score_json_ready` | JSON sob demanda |
-| Mapeamento holdout | `holdout_segment_risk_ready` | Escora ~60k 1× + `@st.cache_data` |
+|---|---|---|
+| Catálogo | `catalog_ready` / `btn_load_catalog` | Evita markdown pesado em reruns da mesa |
+| Dossiê completo | `dossier_table_ready` | Monta dataframe ABT sob demanda |
+| JSON da escoragem | `score_json_ready` | Exibe payload técnico sob demanda |
+| Segmentação Holdout | `holdout_segment_risk_ready` | Cálculo e cache sob demanda |
+| Métricas oficiais | `performance_metrics_ready` | Carrega metadata/model KPIs sob demanda |
 
-**Trade-off conhecido:** depois de carregar tudo, catálogo/dataframes **voltam a ser remountados** em todo rerun (holdout ML fica em cache; render não). `Limpar` zera dossiê/JSON, mas **não** zera catálogo nem mapeamento.
+## Próximos passos sugeridos
 
-### Plano antigo de referência
-
-`~/.cursor/plans/dashboard_performance_review_ac1a09b9.plan.md` (lazy-load já marcado completed).
-
-### Possíveis próximos passos (a decidir no chat novo)
-
-1. Performance: carregar catálogo só na 1ª visita à aba / desmontar após uso / reduzir custo do HTML do catálogo  
-2. Aparência: CSS, hierarquia visual, densidade da mesa, consistência das 3 abas  
-3. Push/PR desta branch `docs/architecture-and-hmdr-cleanup` (docs + diagrama + split) antes ou junto com o polish de UI  
+1. **Performance**
+   - reduzir recomputação e remount de blocos pesados;
+   - revisar pontos de cache no catálogo/performance.
+2. **Aparência**
+   - ajustar hierarquia visual, densidade e consistência de copy entre abas.
+3. **Confiabilidade**
+   - manter asserts de UI sincronizados com copy/estrutura real.
 
 ## Comandos úteis
 
 ```bash
 cd /home/anderson/projeto-final-ia-labdata-fia-credit-risk
-git checkout docs/architecture-and-hmdr-cleanup
 git status -sb
-git log --oneline main..HEAD
+git log --oneline --decorate -n 20
 
-# Testes UI
-docker compose run --rm --no-deps streamlit python -m pytest /app/tests/test_dashboard_layout.py -q
+# UI (Streamlit-marked)
+docker compose exec -T dev python -m pytest tests -m streamlit -q
 
-# Dashboard
-# http://localhost:8501
+# Core integrações/CredIA
+docker compose exec -T api python -m pytest /app/tests/test_integrations_config.py /app/tests/test_ai_commentary.py -q
+
+# Airflow
+docker compose exec -T airflow python -m pytest /opt/airflow/tests -q
 ```
 
-## Prompt sugerido para o chat novo
+## Segurança operacional
 
-> Continuar em `docs/architecture-and-hmdr-cleanup`. Ler `@docs/handoff-dashboard-performance.md`. Foco: performance e aparência do dashboard Streamlit (`app/dashboard.py` + `app/ui/`). Não reabrir a auditoria MLOps inteira. Propor melhorias concretas sem quebrar os asserts de `tests/test_dashboard_layout.py` (manter `st.tabs`, sem `st.fragment`/`st.radio` de navegação, um `@st.cache_data(show_spinner=False)`).
+- Não incluir tokens/chaves em commits ou snippets.
+- Evitar compartilhar saída bruta de `docker compose config` quando houver segredos resolvidos.
+- Preferir redaction em logs/prints de ambiente.

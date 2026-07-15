@@ -116,9 +116,11 @@ Arquivo: [`MLOps/docker-compose.yml`](docker-compose.yml) (symlink para a raiz).
 
 ### Pré-requisito (ingestão Bronze)
 
-Token Kaggle em `~/.kaggle/access_token` ([settings/api](https://www.kaggle.com/settings/api)
-→ *Generate New Token*). A pasta `~/.kaggle` é montada no container do Airflow;
-o script `kagglehub` usa esse token para baixar a competição.
+Token Kaggle em `~/.config/fia-credit-risk/kaggle/kaggle.env`
+([settings/api](https://www.kaggle.com/settings/api) → *Generate New Token*),
+no formato `KAGGLE_API_TOKEN=<seu-token>`.
+O `docker-compose.override.yml` carrega esse arquivo como `env_file` para
+`dev` e `airflow` (`required: false`).
 
 ### Subir o ambiente
 
@@ -132,7 +134,7 @@ Aguarde 1–2 minutos para o Airflow concluir `db migrate` e `dags reserialize`.
 ### Executar o pipeline (Airflow)
 
 1. Acesse `http://localhost:8080`.
-2. Despause as quatro DAGs e dispare **apenas** `01_bronze_ingest_kaggle`; as
+2. Despause as cinco DAGs e dispare **apenas** `01_bronze_ingest_kaggle`; as
    demais são acionadas automaticamente.
 
 Equivalente CLI:
@@ -142,8 +144,12 @@ docker compose exec -T airflow airflow dags unpause 01_bronze_ingest_kaggle
 docker compose exec -T airflow airflow dags unpause 02_silver_clean_data
 docker compose exec -T airflow airflow dags unpause 03_gold_abt_features
 docker compose exec -T airflow airflow dags unpause 04_model_train_lightgbm
+docker compose exec -T airflow airflow dags unpause 05_monitor_health
 docker compose exec -T airflow airflow dags trigger 01_bronze_ingest_kaggle
 ```
+
+A DAG `05_monitor_health` também roda a cada 5 minutos enquanto o `trained_at`
+do modelo estiver nas últimas 24h.
 
 ### Orquestração fora do Airflow
 
@@ -196,7 +202,7 @@ Documento teórico:
 |---|---|
 | Script | `scripts/mlops_monitoring.py` |
 | Config drift (PSI) | `DataPipeline/pipeline_config.yaml` → seção `monitoring` |
-| DAG | `05_monitor_health` |
+| DAG | `05_monitor_health` (pós-treino + a cada 5 min com freshness 24h) |
 | Relatório | `s3://artifacts/monitoring/latest.json` |
 | API | `GET /monitoring/latest`, `POST /monitoring/run` |
 

@@ -6,7 +6,6 @@ lightgbm
 matplotlib
 seaborn
 jupyterlab
-python-dotenv
 pyarrow
 streamlit
 boto3

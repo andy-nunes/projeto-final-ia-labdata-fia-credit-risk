@@ -12,6 +12,8 @@ from typing import Any
 
 import yaml
 
+from scripts.integrations_config import get_integrations_config
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 _LEGACY_CONFIG_PATH = REPO_ROOT / "config" / "model_config.yaml"
 DEFAULT_CONFIG_PATH = REPO_ROOT / "Model" / "model_config.yaml"
@@ -243,14 +245,11 @@ def load_model_metadata(
             if fs is None:
                 import s3fs
 
+                endpoint_url = get_integrations_config().minio.endpoint_url
                 fs = s3fs.S3FileSystem(
                     key=os.getenv("MINIO_ROOT_USER", "minioadmin"),
                     secret=os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"),
-                    client_kwargs={
-                        "endpoint_url": os.getenv(
-                            "MINIO_ENDPOINT_URL", "http://minio:9000"
-                        )
-                    },
+                    client_kwargs={"endpoint_url": endpoint_url},
                 )
             with fs.open(path, "rb") as handle:
                 return json.loads(handle.read().decode("utf-8"))

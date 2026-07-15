@@ -17,12 +17,12 @@ from typing import Any
 
 import s3fs
 
+from scripts.integrations_config import get_integrations_config
 from scripts.model_config import get_model_config
 
 
 LOGGER = logging.getLogger(__name__)
 
-MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
 MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "minioadmin")
 MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "minioadmin")
 AUTOMATION_EVENTS_PREFIX = os.getenv(
@@ -44,10 +44,11 @@ QUEUE_FOLDERS = (
 
 def get_s3_filesystem() -> s3fs.S3FileSystem:
     """Cria filesystem S3 apontando para o MinIO."""
+    endpoint_url = get_integrations_config().minio.endpoint_url
     return s3fs.S3FileSystem(
         key=MINIO_ROOT_USER,
         secret=MINIO_ROOT_PASSWORD,
-        client_kwargs={"endpoint_url": MINIO_ENDPOINT_URL},
+        client_kwargs={"endpoint_url": endpoint_url},
     )
 
 

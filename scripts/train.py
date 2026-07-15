@@ -26,21 +26,31 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
+from scripts.integrations_config import get_integrations_config
 from scripts.model_config import ModelConfig, export_metadata, get_model_config
 
 warnings.filterwarnings("ignore")
 
 MINIO_KEY = os.getenv("MINIO_KEY", os.getenv("MINIO_ROOT_USER", "minioadmin"))
 MINIO_SECRET = os.getenv("MINIO_SECRET", os.getenv("MINIO_ROOT_PASSWORD", "minioadmin"))
-MINIO_ENDPOINT_URL = os.getenv("MINIO_ENDPOINT_URL", "http://minio:9000")
+
+
+def config_path_for_metadata(config_path: Path) -> str:
+    """Normaliza config_path para formato relativo ao repositório quando possível."""
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        return str(config_path.resolve().relative_to(repo_root))
+    except Exception:
+        return str(config_path)
 
 
 def get_s3_filesystem() -> s3fs.S3FileSystem:
     """Cria cliente S3 apontando para o MinIO local."""
+    endpoint_url = get_integrations_config().minio.endpoint_url
     return s3fs.S3FileSystem(
         key=MINIO_KEY,
         secret=MINIO_SECRET,
-        client_kwargs={"endpoint_url": MINIO_ENDPOINT_URL},
+        client_kwargs={"endpoint_url": endpoint_url},
     )
 
 
@@ -278,7 +288,7 @@ def build_metadata(
     return {
         "project": config.raw["project"]["name"],
         "config_version": config.raw["metadata"]["version"],
-        "config_path": str(config.config_path),
+        "config_path": config_path_for_metadata(config.config_path),
         "trained_at": datetime.now(timezone.utc).isoformat(),
         "algorithm": config.model_params["algorithm"],
         "feature_set": config.feature_set,

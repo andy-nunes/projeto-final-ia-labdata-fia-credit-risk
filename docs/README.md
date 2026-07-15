@@ -36,6 +36,8 @@ Home Credit Default Risk.
   variaveis da ABT no Streamlit.
 - [`operations/minio-client.md`](operations/minio-client.md): inspecao e copia de
   objetos no MinIO.
+- [`handoff-dashboard-performance.md`](handoff-dashboard-performance.md):
+  guia rapido de leitura da aba de performance do dashboard.
 
 ## Referencia
 

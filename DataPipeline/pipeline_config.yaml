@@ -6,9 +6,8 @@ project:
   data_dir: Dados  # staging temporário local (não é fonte oficial do lake)
 
 minio:
+  # Endpoint do MinIO (credenciais via env: MINIO_ROOT_USER/MINIO_ROOT_PASSWORD)
   endpoint_url: http://minio:9000
-  key: minioadmin
-  secret: minioadmin
 
 buckets:
   raw: raw

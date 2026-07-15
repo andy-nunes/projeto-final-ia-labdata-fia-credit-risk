@@ -1,5 +1,8 @@
 kagglehub
 boto3
+pandas
+numpy
+pyarrow
 pytest
 pytest-mock
 s3fs

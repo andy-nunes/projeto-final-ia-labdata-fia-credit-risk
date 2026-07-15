@@ -322,6 +322,8 @@ _PAGE_STYLE = """
         color: #64748b;
         font-size: 0.78rem;
         line-height: 1.25;
+        overflow-wrap: normal;
+        word-break: keep-all;
     }
     .factor-list {
         display: grid;
